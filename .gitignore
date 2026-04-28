@@ -39,3 +39,5 @@ frontend/.eslintcache
 frontend/.npm/
 frontend/.vite/
 frontend/*.tsbuildinfo
+
+.run
