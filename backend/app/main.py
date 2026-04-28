@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -33,6 +34,13 @@ def create_application() -> FastAPI:
     @app.get("/health", tags=["system"])
     def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/swagger", tags=["system"], include_in_schema=False)
+    def swagger_ui():
+        return get_swagger_ui_html(
+            openapi_url=app.openapi_url or f"{settings.API_V1_PREFIX}/openapi.json",
+            title=f"{settings.PROJECT_NAME} - Swagger UI",
+        )
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
