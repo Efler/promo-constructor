@@ -1,0 +1,41 @@
+services:
+
+
+  pc_postgres:
+    image: postgres:latest
+    container_name: pc_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: pc_admin
+      POSTGRES_PASSWORD: pc_password
+      POSTGRES_DB: promo_constructor
+    volumes:
+      - ./volumes/pc_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U pc_admin -d promo_constructor" ]
+      interval: 3s
+      timeout: 3s
+      retries: 3
+    networks:
+      - promo-constructor-network
+
+  pc_pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pc_pgadmin
+    ports:
+      - "5444:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pc_pgadmin_admin@cheetos.com
+      PGADMIN_DEFAULT_PASSWORD: pc_pgadmin_password
+    volumes:
+      - ./volumes/pc_pgadmin:/var/lib/pgadmin
+    depends_on:
+      - pc_postgres
+    networks:
+      - promo-constructor-network
+
+
+networks:
+  promo-constructor-network:
+    name: promo-constructor-network
