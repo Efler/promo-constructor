@@ -34,7 +34,19 @@ async function fetchCurrentSeller() {
     return response.seller
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      return null
+      try {
+        const refreshed = await apiRequest<AuthResponse>('/auth/refresh', {
+          method: 'POST',
+        })
+
+        return refreshed.seller
+      } catch (refreshError) {
+        if (refreshError instanceof ApiError && refreshError.status === 401) {
+          return null
+        }
+
+        throw refreshError
+      }
     }
 
     throw error

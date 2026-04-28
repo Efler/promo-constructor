@@ -1,6 +1,7 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { GuestOnlyRoute } from '../../features/auth/GuestOnlyRoute'
 import { RequireAuth } from '../../features/auth/RequireAuth'
+import { BundlesWorkspacePage } from '../../pages/home/BundlesWorkspacePage'
 import { MechanicsOverviewPage } from '../../pages/home/MechanicsOverviewPage'
 import { MechanicWorkspacePage } from '../../pages/home/MechanicWorkspacePage'
 import { PrivateLayout } from '../../pages/home/PrivateLayout'
@@ -63,18 +64,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'bundles',
-        element: (
-          <MechanicWorkspacePage
-            badge="Beta"
-            title="Комплекты"
-            description="Здесь позже появится настройка механики товарных комплектов."
-            highlights={[
-              'Состав комплектов',
-              'Бонусы и скидки',
-              'Проверка совместимости товаров',
-            ]}
-          />
-        ),
+        element: <BundlesWorkspacePage />,
       },
       {
         path: '*',

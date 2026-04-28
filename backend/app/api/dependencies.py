@@ -1,11 +1,19 @@
-from fastapi import HTTPException, Request, status
+from __future__ import annotations
+
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import decode_token
-from app.schemas.auth import SellerIdentity
+from app.db.session import get_db
+from app.models.seller import Seller
+from app.repositories.seller import get_seller_by_id
 
 
-def get_current_seller(request: Request) -> SellerIdentity:
+def get_current_seller(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Seller:
     token = request.cookies.get(settings.ACCESS_COOKIE_NAME)
 
     if not token:
@@ -15,13 +23,27 @@ def get_current_seller(request: Request) -> SellerIdentity:
         )
 
     payload = decode_token(token, expected_type="access")
-    username = payload.get("sub")
+    subject = payload.get("sub")
 
-    if not username:
+    if not subject:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Seller context is missing.",
         )
 
-    display_name = payload.get("display_name") or username
-    return SellerIdentity(username=username, display_name=display_name)
+    try:
+        seller_id = int(subject)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Seller context is invalid.",
+        ) from exc
+
+    seller = get_seller_by_id(db, seller_id)
+    if seller is None or not seller.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Seller account is unavailable.",
+        )
+
+    return seller

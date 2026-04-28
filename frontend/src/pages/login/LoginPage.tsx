@@ -4,6 +4,7 @@ import { IconArrowRight, IconLock, IconUserCircle } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/use-auth'
+import { ApiError } from '../../shared/api/client'
 
 type FormValues = {
   username: string
@@ -38,11 +39,27 @@ export function LoginPage() {
 
       const nextPath = (location.state as { from?: string } | null)?.from ?? '/app'
       navigate(nextPath, { replace: true })
-    } catch {
+    } catch (error) {
+      let message = 'Проверь логин, пароль и доступность backend API.'
+
+      if (error instanceof ApiError) {
+        const detail =
+          typeof error.data === 'object' &&
+          error.data !== null &&
+          'detail' in error.data &&
+          typeof error.data.detail === 'string'
+            ? error.data.detail
+            : null
+
+        if (detail) {
+          message = detail
+        }
+      }
+
       notifications.show({
         color: 'red',
         title: 'Не удалось войти',
-        message: 'Проверь доступность backend API и попробуй снова.',
+        message,
       })
     }
   }
@@ -73,8 +90,8 @@ export function LoginPage() {
                   Авторизуйся как seller, чтобы работать с механиками продвижения.
                 </Title>
                 <Text c="dimmed" size="lg" mt="md" maw={540}>
-                  Это стартовая заготовка приложения: доступ к механикам закрыт до входа,
-                  а текущий логин пропускает любое сочетание учетных данных.
+                  Доступ к механикам закрыт до входа. Seller-аккаунт теперь проверяется
+                  через backend и PostgreSQL.
                 </Text>
               </div>
 
@@ -133,7 +150,7 @@ export function LoginPage() {
                   />
                   <PasswordInput
                     label="Пароль"
-                    placeholder="Любой пароль"
+                    placeholder="Введите пароль"
                     leftSection={<IconLock size={18} />}
                     {...form.getInputProps('password')}
                   />
@@ -149,8 +166,8 @@ export function LoginPage() {
               </form>
 
               <Text size="sm" c="dimmed">
-                Пока это auth-заглушка. Любая пара логин/пароль создаст seller session
-                через backend API.
+                Для первого входа создай аккаунт через POST /api/v1/auth/register,
+                затем используй обычный логин.
               </Text>
             </Stack>
           </Paper>
