@@ -15,42 +15,15 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { useQuery } from '@tanstack/react-query'
 import { IconAlertCircle, IconBoxSeam, IconChevronDown, IconSparkles } from '@tabler/icons-react'
-import { apiRequest } from '../../shared/api/client'
 import productPlaceholder from '../../assets/product-placeholder.png'
-
-export type SellerProductPreviewItem = {
-  id: number
-  title: string
-  brand: string | null
-  description: string | null
-  subject_name: string | null
-  parent_name: string | null
-  main_photo_url: string | null
-  is_active: boolean
-  item_count: number
-  total_stock_qty: number
-  min_price: string
-  min_discounted_price: string | null
-  max_discount_percent: number
-  sizes: string[]
-}
+import {
+  formatProductMoney,
+  useSellerProductPreviewQuery,
+} from './use-seller-product-preview'
 
 type SellerProductPreviewProps = {
   sellerId: number | null
-}
-
-function formatMoney(value: string | null) {
-  if (!value) {
-    return null
-  }
-
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(Number(value))
 }
 
 export function SellerProductPreview({ sellerId }: SellerProductPreviewProps) {
@@ -60,10 +33,9 @@ export function SellerProductPreview({ sellerId }: SellerProductPreviewProps) {
     setIsVisible(false)
   }, [sellerId])
 
-  const productsQuery = useQuery({
-    queryKey: ['seller-product-preview', sellerId],
-    queryFn: () => apiRequest<SellerProductPreviewItem[]>('/products/bundle-cards'),
-    enabled: isVisible && sellerId !== null,
+  const productsQuery = useSellerProductPreviewQuery({
+    sellerId,
+    enabled: isVisible,
   })
 
   async function handleRevealProducts() {
@@ -252,11 +224,13 @@ export function SellerProductPreview({ sellerId }: SellerProductPreviewProps) {
                           От цены
                         </Text>
                         <Text fw={700} mt={4}>
-                          {formatMoney(product.min_discounted_price ?? product.min_price)}
+                          {formatProductMoney(
+                            product.min_discounted_price ?? product.min_price,
+                          )}
                         </Text>
                         {product.min_discounted_price ? (
                           <Text size="sm" c="dimmed">
-                            Базовая: {formatMoney(product.min_price)}
+                            Базовая: {formatProductMoney(product.min_price)}
                           </Text>
                         ) : null}
                       </Paper>

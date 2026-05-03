@@ -1,7 +1,17 @@
 from app.models.base import Base
+from app.models.promocode import Promocode
+from app.models.promocode_product import PromocodeProduct
 from app.models.product import Product
 from app.models.product_item import ProductItem
 from app.models.refresh_session import RefreshSession
 from app.models.seller import Seller
 
-__all__ = ["Base", "Product", "ProductItem", "RefreshSession", "Seller"]
+__all__ = [
+    "Base",
+    "Product",
+    "ProductItem",
+    "Promocode",
+    "PromocodeProduct",
+    "RefreshSession",
+    "Seller",
+]

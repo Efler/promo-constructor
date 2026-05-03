@@ -5,6 +5,8 @@ import { MechanicsOverviewPage } from '../../pages/home/MechanicsOverviewPage'
 import { MechanicWorkspacePage } from '../../pages/home/MechanicWorkspacePage'
 import { PrivateLayout } from '../../pages/home/PrivateLayout'
 import { LoginPage } from '../../pages/login/LoginPage'
+import { PromocodeConstructorPage } from '../../pages/promocodes/PromocodeConstructorPage'
+import { PromocodeListPage } from '../../pages/promocodes/PromocodeListPage'
 import { SellerProfilePage } from '../../pages/profile/SellerProfilePage'
 
 const router = createBrowserRouter([
@@ -47,12 +49,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'promocodes',
-        element: (
-          <MechanicWorkspacePage
-            title="Промокоды"
-            description="Настраивайте промокоды для покупателей и управляйте скидкой, сроком действия и правилами применения."
-          />
-        ),
+        element: <PromocodeListPage />,
+      },
+      {
+        path: 'promocodes/new',
+        element: <PromocodeConstructorPage />,
       },
       {
         path: 'bundles',

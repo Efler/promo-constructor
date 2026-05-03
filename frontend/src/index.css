@@ -30,6 +30,44 @@ body {
   overflow-y: scroll;
 }
 
+.mantine-Input-input::placeholder,
+.mantine-DatePickerInput-input::placeholder,
+.mantine-PillsInput-input::placeholder,
+.mantine-Input-input[data-placeholder] {
+  color: #645b67;
+  opacity: 1;
+  font-weight: 500;
+}
+
+.mantine-InputWrapper-description,
+.mantine-InputWrapper-error,
+.mantine-InputWrapper-label,
+.mantine-Text-root[data-size="xs"],
+.mantine-Text-root[data-size="sm"] {
+  letter-spacing: 0.01em;
+}
+
+.mantine-InputWrapper-description,
+.mantine-Text-root[data-size="sm"] {
+  color: #534a56;
+  font-weight: 550;
+}
+
+.mantine-Text-root[data-size="xs"] {
+  color: #605864;
+  font-weight: 550;
+}
+
+.mantine-InputWrapper-label {
+  color: #251f29;
+  font-weight: 600;
+}
+
+.mantine-InputWrapper-error {
+  color: #c43d66;
+  font-weight: 600;
+}
+
 a {
   color: inherit;
   text-decoration: none;

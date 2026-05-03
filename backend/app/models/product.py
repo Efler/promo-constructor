@@ -9,6 +9,7 @@ from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.product_item import ProductItem
+    from app.models.promocode_product import PromocodeProduct
     from app.models.seller import Seller
 
 
@@ -43,4 +44,8 @@ class Product(TimestampMixin, Base):
         back_populates="product",
         cascade="all, delete-orphan",
         order_by="ProductItem.id",
+    )
+    promocode_links: Mapped[list["PromocodeProduct"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
     )
