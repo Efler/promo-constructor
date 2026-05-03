@@ -33,6 +33,23 @@ def get_product_by_vendor_code(db: Session, *, seller_id: int, vendor_code: str)
     return db.execute(statement).scalar_one_or_none()
 
 
+def list_products_for_seller_by_ids(
+    db: Session,
+    *,
+    seller_id: int,
+    product_ids: list[int],
+) -> list[Product]:
+    if not product_ids:
+        return []
+
+    statement: Select[tuple[Product]] = (
+        select(Product)
+        .where(Product.seller_id == seller_id, Product.id.in_(product_ids))
+        .order_by(Product.id)
+    )
+    return list(db.execute(statement).scalars().all())
+
+
 def add_product(db: Session, product: Product) -> Product:
     db.add(product)
     return product

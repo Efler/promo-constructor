@@ -5,6 +5,8 @@
 - `sellers`
 - `products`
 - `product_items`
+- `promocodes`
+- `promocode_products`
 - `refresh_sessions`
 
 ## Обзор Сущностей
@@ -20,6 +22,14 @@
 ### `product_items`
 
 Конкретные товарные позиции внутри карточки товара. Хранит данные уровня размера или item-позиции: размер, штрихкод, цену, скидку, остаток и связанные флаги.
+
+### `promocodes`
+
+Конфигурация промокода, принадлежащая селлеру.
+
+### `promocode_products`
+
+Связка промокода с товарами, если промокод действует не на весь ассортимент, а только на выбранные товары.
 
 ### `refresh_sessions`
 
@@ -128,6 +138,87 @@ create index ix_product_items_size_id on product_items (size_id);
 create index ix_product_items_is_active on product_items (is_active);
 
 
+create table promocodes (
+    id bigserial primary key,
+    seller_id bigint not null,
+    title varchar(50) not null,
+    starts_on date not null,
+    ends_on date not null,
+    discount_mode varchar(16) not null,
+    discount_value integer not null,
+    promo_type varchar(40) not null,
+    audience_type varchar(40) not null,
+    product_scope varchar(16) not null,
+    code varchar(15) not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint fk_promocodes_seller_id
+        foreign key (seller_id)
+        references sellers(id)
+        on delete cascade,
+    constraint uq_promocodes_code unique (code),
+    constraint chk_promocodes_title_not_blank check (length(btrim(title)) > 0),
+    constraint chk_promocodes_dates_order check (ends_on >= starts_on),
+    constraint chk_promocodes_duration_max_31_days check (ends_on <= starts_on + 30),
+    constraint chk_promocodes_discount_mode check (
+        discount_mode in ('percent', 'amount')
+    ),
+    constraint chk_promocodes_discount_value_positive check (discount_value > 0),
+    constraint chk_promocodes_discount_percent_range check (
+        (discount_mode = 'percent' and discount_value between 1 and 99)
+        or
+        (discount_mode = 'amount' and discount_value >= 1)
+    ),
+    constraint chk_promocodes_promo_type check (
+        promo_type in (
+            'single_buyer_single_order',
+            'all_buyers_once',
+            'all_buyers_limited'
+        )
+    ),
+    constraint chk_promocodes_audience_type check (
+        audience_type in (
+            'all',
+            'bought_last_half_year',
+            'not_bought_last_half_year'
+        )
+    ),
+    constraint chk_promocodes_product_scope check (
+        product_scope in ('all', 'selected')
+    ),
+    constraint chk_promocodes_code_format check (
+        code ~ '^[A-Za-z0-9]{4,15}$'
+    )
+);
+
+create index ix_promocodes_seller_id on promocodes (seller_id);
+create index ix_promocodes_starts_on on promocodes (starts_on);
+create index ix_promocodes_ends_on on promocodes (ends_on);
+create index ix_promocodes_promo_type on promocodes (promo_type);
+create index ix_promocodes_audience_type on promocodes (audience_type);
+
+
+create table promocode_products (
+    promocode_id bigint not null,
+    product_id bigint not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promocode_products
+        primary key (promocode_id, product_id),
+    constraint fk_promocode_products_promocode_id
+        foreign key (promocode_id)
+        references promocodes(id)
+        on delete cascade,
+    constraint fk_promocode_products_product_id
+        foreign key (product_id)
+        references products(id)
+        on delete cascade
+);
+
+create index ix_promocode_products_product_id on promocode_products (product_id);
+
+
 create table refresh_sessions (
     id uuid primary key,
     seller_id bigint not null,
@@ -212,6 +303,32 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 | `created_at` | `timestamptz` | Время создания записи. |
 | `updated_at` | `timestamptz` | Время последнего обновления записи. |
 
+### `promocodes`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `id` | `bigserial` | Внутренний идентификатор промокода. |
+| `seller_id` | `bigint` | Владелец промокода. Ссылка на `sellers.id`. |
+| `title` | `varchar(50)` | Внутреннее название промокода, видимое только продавцу. |
+| `starts_on` | `date` | Дата начала действия промокода. |
+| `ends_on` | `date` | Дата окончания действия промокода. |
+| `discount_mode` | `varchar(16)` | Режим скидки: проценты или фиксированная сумма. |
+| `discount_value` | `integer` | Значение скидки в выбранном режиме. |
+| `promo_type` | `varchar(40)` | Тип использования промокода, выбранный в UI-конструкторе. |
+| `audience_type` | `varchar(40)` | Сегмент аудитории, выбранный в UI-конструкторе. |
+| `product_scope` | `varchar(16)` | Действует ли промокод на все товары или только на выбранные. |
+| `code` | `varchar(15)` | Финальная строка промокода, сгенерированная или введенная вручную. Глобально уникальна. |
+| `created_at` | `timestamptz` | Время создания записи. |
+| `updated_at` | `timestamptz` | Время последнего обновления записи. |
+
+### `promocode_products`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `promocode_id` | `bigint` | Привязанный промокод. Ссылка на `promocodes.id`. |
+| `product_id` | `bigint` | Привязанный товар. Ссылка на `products.id`. |
+| `created_at` | `timestamptz` | Когда товар был привязан к промокоду. |
+
 ### `refresh_sessions`
 
 | Поле | Тип | Смысл |
@@ -229,10 +346,16 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 
 - Один `seller` -> много `products`
 - Один `product` -> много `product_items`
+- Один `seller` -> много `promocodes`
+- Один `promocode` -> много `promocode_products`
+- Один `product` -> много `promocode_products`
 - Один `seller` -> много `refresh_sessions`
 
 ## Примечания К Реализации
 
 - `updated_at` должен поддерживаться на уровне приложения или слоя SQLAlchemy.
+- `promocode_products` должна оставаться пустой, когда `promocodes.product_scope = 'all'`.
+- `promocode_products` должна содержать хотя бы одну строку, когда `promocodes.product_scope = 'selected'`.
+- Валидация правил "дата старта не раньше завтрашнего дня и не позже трех месяцев от момента создания" должна выполняться в прикладной логике.
 - `refresh_token_hash` нужно сравнивать через хеширование входящего refresh-токена, а не хранить сырой текст токена.
 - Access tokens могут оставаться короткоживущими JWT в `httpOnly` cookies.

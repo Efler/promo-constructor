@@ -11,6 +11,7 @@ from sqlalchemy.types import Uuid
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.promocode import Promocode
     from app.models.product import Product
     from app.models.refresh_session import RefreshSession
 
@@ -36,6 +37,10 @@ class Seller(TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     refresh_sessions: Mapped[list["RefreshSession"]] = relationship(
+        back_populates="seller",
+        cascade="all, delete-orphan",
+    )
+    promocodes: Mapped[list["Promocode"]] = relationship(
         back_populates="seller",
         cascade="all, delete-orphan",
     )
