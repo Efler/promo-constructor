@@ -22,7 +22,7 @@ export function LoginPage() {
       password: '',
     },
     validate: {
-      username: (value) => (value.trim().length > 0 ? null : 'Укажи логин селлера'),
+      username: (value) => (value.trim().length > 0 ? null : 'Укажи логин продавца'),
       password: (value) => (value.trim().length > 0 ? null : 'Укажи пароль'),
     },
   })
@@ -40,7 +40,7 @@ export function LoginPage() {
       const nextPath = (location.state as { from?: string } | null)?.from ?? '/app'
       navigate(nextPath, { replace: true })
     } catch (error) {
-      let message = 'Проверь логин, пароль и доступность backend API.'
+      let message = 'Проверь логин и пароль. Если ошибка повторится, попробуй позже.'
 
       if (error instanceof ApiError) {
         const detail =
@@ -66,7 +66,7 @@ export function LoginPage() {
 
   return (
     <Box className="auth-page">
-      <Box h={28} bg="#BC3D96" />
+      <Box h={28} bg="#AE2573" />
 
       <Container size={1180} py={{ base: 40, md: 72 }}>
         <Group align="stretch" gap="xl">
@@ -76,7 +76,7 @@ export function LoginPage() {
             p={{ base: 'xl', md: 44 }}
             shadow="md"
             style={{
-              border: '1px solid rgba(113, 33, 93, 0.08)',
+              border: '1px solid rgba(174, 37, 115, 0.1)',
               background: 'rgba(255, 255, 255, 0.88)',
               backdropFilter: 'blur(16px)',
             }}
@@ -87,11 +87,11 @@ export function LoginPage() {
                   Promo Constructor
                 </Text>
                 <Title order={1} maw={520}>
-                  Авторизуйся как seller, чтобы работать с механиками продвижения.
+                  Войдите в кабинет продавца и управляйте механиками продвижения.
                 </Title>
                 <Text c="dimmed" size="lg" mt="md" maw={540}>
-                  Доступ к механикам закрыт до входа. Seller-аккаунт теперь проверяется
-                  через backend и PostgreSQL.
+                  В одном кабинете собраны инструменты для работы с акциями,
+                  промокодами и комплектами товаров.
                 </Text>
               </div>
 
@@ -124,18 +124,18 @@ export function LoginPage() {
             p={{ base: 'xl', md: 36 }}
             shadow="md"
             style={{
-              border: '1px solid rgba(113, 33, 93, 0.08)',
+              border: '1px solid rgba(174, 37, 115, 0.1)',
               background:
-                'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(249,244,250,0.95))',
+                'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(250,242,247,0.96))',
             }}
           >
             <Stack gap="lg">
               <Group gap="sm">
-                <IconUserCircle size={28} color="#BC3D96" />
+                <IconUserCircle size={28} color="#AE2573" />
                 <div>
-                  <Title order={3}>Seller login</Title>
+                  <Title order={3}>Вход в кабинет</Title>
                   <Text size="sm" c="dimmed">
-                    Вход в защищенную часть конструктора
+                    Используйте логин и пароль от аккаунта продавца
                   </Text>
                 </div>
               </Group>
@@ -144,7 +144,7 @@ export function LoginPage() {
                 <Stack gap="md">
                   <TextInput
                     label="Логин"
-                    placeholder="seller_roman"
+                    placeholder="Введите логин"
                     leftSection={<IconUserCircle size={18} />}
                     {...form.getInputProps('username')}
                   />
@@ -166,8 +166,7 @@ export function LoginPage() {
               </form>
 
               <Text size="sm" c="dimmed">
-                Для первого входа создай аккаунт через POST /api/v1/auth/register,
-                затем используй обычный логин.
+                Если не удается войти, проверьте данные для входа и попробуйте еще раз.
               </Text>
             </Stack>
           </Paper>

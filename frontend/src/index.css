@@ -1,8 +1,8 @@
 :root {
-  color: #201e22;
+  color: #111111;
   background:
-    radial-gradient(circle at top left, rgba(188, 61, 150, 0.09), transparent 28%),
-    linear-gradient(180deg, #f7f2fb 0%, #f8f7fb 18%, #fcfbfd 100%);
+    radial-gradient(circle at top left, rgba(174, 37, 115, 0.11), transparent 28%),
+    linear-gradient(180deg, #fcf4f8 0%, #fbf9fb 18%, #ffffff 100%);
   font-family: "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -21,8 +21,13 @@ body,
   min-height: 100%;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
+  overflow-y: scroll;
 }
 
 a {
@@ -33,9 +38,9 @@ a {
 .auth-page {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 20% 20%, rgba(188, 61, 150, 0.15), transparent 24%),
-    radial-gradient(circle at 80% 0%, rgba(82, 20, 96, 0.12), transparent 20%),
-    linear-gradient(180deg, #f5edf8 0%, #fbf9fc 28%, #ffffff 100%);
+    radial-gradient(circle at 20% 20%, rgba(174, 37, 115, 0.17), transparent 24%),
+    radial-gradient(circle at 80% 0%, rgba(146, 28, 95, 0.12), transparent 20%),
+    linear-gradient(180deg, #faf0f6 0%, #fcf9fb 28%, #ffffff 100%);
 }
 
 .mechanic-link {
@@ -44,7 +49,7 @@ a {
   gap: 8px;
   border-radius: 999px;
   padding: 10px 16px;
-  color: #5f5a67;
+  color: #5f5760;
   font-size: 14px;
   font-weight: 600;
   transition:
@@ -54,12 +59,12 @@ a {
 }
 
 .mechanic-link:hover {
-  background-color: rgba(188, 61, 150, 0.08);
-  color: #2b2431;
+  background-color: rgba(174, 37, 115, 0.08);
+  color: #111111;
   transform: translateY(-1px);
 }
 
 .mechanic-link--active {
-  background: rgba(188, 61, 150, 0.14);
-  color: #71215d;
+  background: rgba(174, 37, 115, 0.14);
+  color: #7f1f56;
 }

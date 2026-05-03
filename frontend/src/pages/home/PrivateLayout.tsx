@@ -1,8 +1,20 @@
-import { AppShell, Avatar, Box, Button, Container, Divider, Group, Paper, Stack, Text, Title } from '@mantine/core'
+import {
+  Avatar,
+  Box,
+  Button,
+  Container,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Title,
+  UnstyledButton,
+} from '@mantine/core'
 import { IconLogout2 } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/use-auth'
+import { TopAccent } from '../../shared/ui/TopAccent'
 import { mechanics } from './mechanics'
 
 export function PrivateLayout() {
@@ -28,25 +40,23 @@ export function PrivateLayout() {
   }
 
   return (
-    <AppShell
-      padding="lg"
-      header={{ height: 152 }}
-      styles={{
-        main: {
-          background: 'transparent',
-        },
-      }}
-    >
-      <AppShell.Header withBorder={false} bg="transparent">
-        <Box h={28} bg="#BC3D96" />
-
+    <Box>
+      <Box
+        component="header"
+        bg="rgba(255, 255, 255, 0.98)"
+        style={{
+          borderBottom: '1px solid rgba(174, 37, 115, 0.1)',
+          boxShadow: '0 10px 28px rgba(174, 37, 115, 0.08)',
+        }}
+      >
+        <TopAccent />
         <Container size="xl" py="lg">
           <Stack gap="md">
             <Group justify="space-between" align="start" gap="lg">
               <div>
                 <Title order={2}>Промо конструктор</Title>
                 <Text c="dimmed" mt={6}>
-                  Конструктор механик продвижения для seller workflow
+                  Конструктор механик продвижения для продавцов
                 </Text>
               </div>
 
@@ -54,20 +64,27 @@ export function PrivateLayout() {
                 radius="xl"
                 p="xs"
                 shadow="sm"
-                style={{ border: '1px solid rgba(113, 33, 93, 0.08)' }}
+                style={{ border: '1px solid rgba(174, 37, 115, 0.1)' }}
               >
                 <Group gap="sm" wrap="nowrap">
-                  <Avatar color="brand" radius="xl">
-                    {seller?.display_name?.slice(0, 1).toUpperCase() ?? 'S'}
-                  </Avatar>
-                  <div>
-                    <Text fw={700} size="sm">
-                      {seller?.display_name}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      Seller login
-                    </Text>
-                  </div>
+                  <UnstyledButton
+                    onClick={() => navigate('/app/profile')}
+                    style={{ borderRadius: '999px', padding: '2px 6px' }}
+                  >
+                    <Group gap="sm" wrap="nowrap">
+                      <Avatar color="brand" radius="xl">
+                        {seller?.display_name?.slice(0, 1).toUpperCase() ?? 'S'}
+                      </Avatar>
+                      <div>
+                        <Text fw={700} size="sm">
+                          {seller?.display_name}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Личный кабинет
+                        </Text>
+                      </div>
+                    </Group>
+                  </UnstyledButton>
                   <Button
                     variant="subtle"
                     color="brand"
@@ -102,15 +119,13 @@ export function PrivateLayout() {
             </Group>
           </Stack>
         </Container>
+      </Box>
 
-        <Divider color="rgba(113, 33, 93, 0.08)" />
-      </AppShell.Header>
-
-      <AppShell.Main>
-        <Container size="xl" pb="xl">
+      <Box component="main">
+        <Container size="xl" py="xl">
           <Outlet />
         </Container>
-      </AppShell.Main>
-    </AppShell>
+      </Box>
+    </Box>
   )
 }

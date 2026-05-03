@@ -1,11 +1,11 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { GuestOnlyRoute } from '../../features/auth/GuestOnlyRoute'
 import { RequireAuth } from '../../features/auth/RequireAuth'
-import { BundlesWorkspacePage } from '../../pages/home/BundlesWorkspacePage'
 import { MechanicsOverviewPage } from '../../pages/home/MechanicsOverviewPage'
 import { MechanicWorkspacePage } from '../../pages/home/MechanicWorkspacePage'
 import { PrivateLayout } from '../../pages/home/PrivateLayout'
 import { LoginPage } from '../../pages/login/LoginPage'
+import { SellerProfilePage } from '../../pages/profile/SellerProfilePage'
 
 const router = createBrowserRouter([
   {
@@ -33,17 +33,15 @@ const router = createBrowserRouter([
         element: <MechanicsOverviewPage />,
       },
       {
+        path: 'profile',
+        element: <SellerProfilePage />,
+      },
+      {
         path: 'promotions',
         element: (
           <MechanicWorkspacePage
-            badge="Beta"
             title="Акции"
-            description="Здесь будет сценарий создания и настройки акций для продавца."
-            highlights={[
-              'Базовые параметры акции',
-              'Товары и ограничения',
-              'Подготовка логики расчета',
-            ]}
+            description="Создавайте акции для отдельных товаров и подбирайте условия, которые помогают повысить продажи."
           />
         ),
       },
@@ -51,20 +49,19 @@ const router = createBrowserRouter([
         path: 'promocodes',
         element: (
           <MechanicWorkspacePage
-            badge="Beta"
             title="Промокоды"
-            description="Этот экран зарезервирован под будущий конструктор промокодов."
-            highlights={[
-              'Правила применения',
-              'Срок действия и лимиты',
-              'Привязка к seller context',
-            ]}
+            description="Настраивайте промокоды для покупателей и управляйте скидкой, сроком действия и правилами применения."
           />
         ),
       },
       {
         path: 'bundles',
-        element: <BundlesWorkspacePage />,
+        element: (
+          <MechanicWorkspacePage
+            title="Комплекты"
+            description="Собирайте товары в комплекты и предлагайте покупателям готовые наборы по выгодной цене."
+          />
+        ),
       },
       {
         path: '*',
