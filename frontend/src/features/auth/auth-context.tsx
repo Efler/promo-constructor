@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, apiRequest } from '../../shared/api/client'
 
 export type Seller = {
+  id: number
   username: string
   display_name: string
+  email: string | null
+  is_active: boolean
 }
 
 type LoginPayload = {
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return response.seller
     },
     onSuccess: (seller) => {
+      queryClient.removeQueries({ queryKey: ['seller-product-preview'] })
       queryClient.setQueryData(['auth', 'me'], seller)
     },
   })
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       })
     },
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['seller-product-preview'] })
       queryClient.setQueryData(['auth', 'me'], null)
     },
   })

@@ -2,26 +2,28 @@ import { createTheme } from '@mantine/core'
 
 export const theme = createTheme({
   primaryColor: 'brand',
+  primaryShade: 6,
   defaultRadius: 'md',
   fontFamily: '"Aptos", "Segoe UI Variable", "Segoe UI", sans-serif',
+  black: '#111111',
   headings: {
     fontFamily: '"Aptos Display", "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif',
   },
   colors: {
     brand: [
-      '#faeef8',
-      '#f3d8ec',
-      '#ebb6dd',
-      '#e18fcf',
-      '#d96dc2',
-      '#d150b5',
-      '#c83fa8',
-      '#bc3d96',
-      '#983078',
-      '#74245b',
+      '#fdf5fa',
+      '#f7e6f0',
+      '#efc5dc',
+      '#e6a0c6',
+      '#d979af',
+      '#cb5498',
+      '#AE2573',
+      '#921c5f',
+      '#711549',
+      '#531035',
     ],
   },
   shadows: {
-    md: '0 16px 40px rgba(113, 33, 93, 0.12)',
+    md: '0 16px 40px rgba(174, 37, 115, 0.14)',
   },
 })
