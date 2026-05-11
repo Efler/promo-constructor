@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     REFRESH_COOKIE_NAME: str = "pc_refresh_token"
     COOKIE_SECURE: bool = False
     COOKIE_SAMESITE: str = "lax"
+    API_ADMIN_PROTECTION_ENABLED: bool = True
+    API_ADMIN_KEY: str = "123-456-789"
+    FRONTEND_INTERNAL_API_KEY: str = "123-frontend-proxy-456"
     BACKEND_CORS_ORIGINS: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
@@ -27,10 +30,23 @@ class Settings(BaseSettings):
         ]
     )
 
+    @model_validator(mode="after")
+    def validate_api_admin_protection(self) -> "Settings":
+        if self.API_ADMIN_PROTECTION_ENABLED and not self.API_ADMIN_KEY:
+            raise ValueError(
+                "API_ADMIN_KEY must be configured when API_ADMIN_PROTECTION_ENABLED is true."
+            )
+        if self.API_ADMIN_PROTECTION_ENABLED and not self.FRONTEND_INTERNAL_API_KEY:
+            raise ValueError(
+                "FRONTEND_INTERNAL_API_KEY must be configured when API_ADMIN_PROTECTION_ENABLED is true."
+            )
+        return self
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 

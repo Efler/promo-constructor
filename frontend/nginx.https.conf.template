@@ -25,6 +25,17 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
+  location /ui-api/ {
+    proxy_pass http://pc_backend:8000/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Admin-Key "";
+    proxy_set_header X-Frontend-Proxy-Key ${FRONTEND_INTERNAL_API_KEY};
+  }
+
   location /api/ {
     proxy_pass http://pc_backend:8000/api/;
     proxy_http_version 1.1;
@@ -32,6 +43,37 @@ server {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Frontend-Proxy-Key "";
+  }
+
+  location = /docs {
+    proxy_pass http://pc_backend:8000/docs;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Frontend-Proxy-Key "";
+  }
+
+  location = /redoc {
+    proxy_pass http://pc_backend:8000/redoc;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Frontend-Proxy-Key "";
+  }
+
+  location = /swagger {
+    proxy_pass http://pc_backend:8000/swagger;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Frontend-Proxy-Key "";
   }
 
   location = /pgadmin {

@@ -27,6 +27,8 @@ set -euo pipefail
 # - CERTBOT_EMAIL
 # - CERTBOT_CERT_NAME
 # - BACKEND_COOKIE_SECURE=true for HTTPS
+# - API_ADMIN_KEY (required on VPS for backend API unlock)
+# - FRONTEND_INTERNAL_API_KEY (required so frontend UI can proxy to backend without manual headers)
 
 # 4. Build the application images from Dockerfiles.
 docker build -t promo-constructor-backend:latest ./backend
@@ -40,6 +42,11 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm pc_b
 
 # 7. Start the whole application stack.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
+
+# Backend API protection note:
+# - if API admin protection is enabled, direct /api/v1/*, /docs, /redoc and /swagger require the X-Admin-Key header
+# - regular frontend UI traffic goes through an internal nginx proxy path and does not require the browser to set X-Admin-Key manually
+# - no browser unlock page is used in the current simplified protection model
 
 # 8. Optional manual seed loading for demo/test data.
 # This is intentionally not part of migrations or automatic startup.
