@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -28,6 +30,25 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed_password: str) -> bool:
     return verify_secret(password, hashed_password)
+
+
+def verify_api_admin_key(candidate: str | None) -> bool:
+    if not candidate or not settings.API_ADMIN_KEY:
+        return False
+
+    return hmac.compare_digest(candidate, settings.API_ADMIN_KEY)
+
+
+def build_api_admin_cookie_value() -> str:
+    return hashlib.sha256(settings.API_ADMIN_KEY.encode("utf-8")).hexdigest()
+
+
+def verify_api_admin_cookie_value(candidate: str | None) -> bool:
+    if not candidate or not settings.API_ADMIN_KEY:
+        return False
+
+    expected = build_api_admin_cookie_value()
+    return hmac.compare_digest(candidate, expected)
 
 
 def _create_token(

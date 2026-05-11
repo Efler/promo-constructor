@@ -27,6 +27,7 @@ set -euo pipefail
 # - CERTBOT_EMAIL
 # - CERTBOT_CERT_NAME
 # - BACKEND_COOKIE_SECURE=true for HTTPS
+# - API_ADMIN_KEY (required on VPS for backend API unlock)
 
 # 4. Build the application images from Dockerfiles.
 docker build -t promo-constructor-backend:latest ./backend
@@ -40,6 +41,11 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm pc_b
 
 # 7. Start the whole application stack.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
+
+# Browser/API access note:
+# - if API admin protection is enabled, the first browser visit that triggers /api/v1/* will be redirected to /api-access
+# - enter API_ADMIN_KEY there once to unlock this browser for 12 hours
+# - script clients can send the same key via header: X-Admin-Key
 
 # 8. Optional manual seed loading for demo/test data.
 # This is intentionally not part of migrations or automatic startup.

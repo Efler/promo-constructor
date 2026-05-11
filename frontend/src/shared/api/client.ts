@@ -19,6 +19,29 @@ export class ApiError extends Error {
   }
 }
 
+function isApiAdminKeyRequired(data: unknown) {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'code' in data &&
+    data.code === 'api_admin_key_required'
+  )
+}
+
+function redirectToApiAccess() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (window.location.pathname === '/api-access') {
+    return
+  }
+
+  const next = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  const target = `/api-access?next=${encodeURIComponent(next || '/')}`
+  window.location.assign(target)
+}
+
 export async function apiRequest<T = void>(
   path: string,
   options: ApiRequestOptions = {},
@@ -55,6 +78,10 @@ export async function apiRequest<T = void>(
     contentType.includes('application/json') ? await response.json() : await response.text()
 
   if (!response.ok) {
+    if (response.status === 403 && isApiAdminKeyRequired(payload)) {
+      redirectToApiAccess()
+    }
+
     throw new ApiError(response.statusText, response.status, payload)
   }
 

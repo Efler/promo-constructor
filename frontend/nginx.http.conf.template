@@ -30,6 +30,31 @@ server {
     return 426 'HTTPS is required for pgAdmin access.';
   }
 
+  location = /api-access {
+    default_type text/plain;
+    return 426 'HTTPS is required for backend API access unlock.';
+  }
+
+  location = /api-access/logout {
+    default_type text/plain;
+    return 426 'HTTPS is required for backend API access unlock.';
+  }
+
+  location = /docs {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
+  }
+
+  location = /redoc {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
+  }
+
+  location = /swagger {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
+  }
+
   location / {
     try_files $uri $uri/ /index.html;
   }
