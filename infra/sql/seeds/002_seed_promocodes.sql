@@ -53,7 +53,7 @@ values
         (select id from sellers where username = 'seller_roman'),
         'Архивный промокод Романа',
         current_date - 40,
-        current_date - 9,
+        current_date - 10,
         'percent',
         10,
         'single_buyer_single_order',
