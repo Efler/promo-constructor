@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -28,6 +29,20 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed_password: str) -> bool:
     return verify_secret(password, hashed_password)
+
+
+def verify_api_admin_key(candidate: str | None) -> bool:
+    if not candidate or not settings.API_ADMIN_KEY:
+        return False
+
+    return hmac.compare_digest(candidate, settings.API_ADMIN_KEY)
+
+
+def verify_frontend_internal_api_key(candidate: str | None) -> bool:
+    if not candidate or not settings.FRONTEND_INTERNAL_API_KEY:
+        return False
+
+    return hmac.compare_digest(candidate, settings.FRONTEND_INTERNAL_API_KEY)
 
 
 def _create_token(

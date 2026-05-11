@@ -15,7 +15,17 @@ server {
     return 426 'HTTPS is required for API access.';
   }
 
+  location = /ui-api {
+    default_type text/plain;
+    return 426 'HTTPS is required for API access.';
+  }
+
   location /api/ {
+    default_type text/plain;
+    return 426 'HTTPS is required for API access.';
+  }
+
+  location /ui-api/ {
     default_type text/plain;
     return 426 'HTTPS is required for API access.';
   }
@@ -28,6 +38,21 @@ server {
   location /pgadmin/ {
     default_type text/plain;
     return 426 'HTTPS is required for pgAdmin access.';
+  }
+
+  location = /docs {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
+  }
+
+  location = /redoc {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
+  }
+
+  location = /swagger {
+    default_type text/plain;
+    return 426 'HTTPS is required for API documentation access.';
   }
 
   location / {
