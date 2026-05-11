@@ -1,0 +1,36 @@
+server {
+  listen 80;
+  server_name ${FRONTEND_SERVER_NAMES};
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+    try_files $uri =404;
+  }
+
+  location = /api {
+    default_type text/plain;
+    return 426 'HTTPS is required for API access.';
+  }
+
+  location /api/ {
+    default_type text/plain;
+    return 426 'HTTPS is required for API access.';
+  }
+
+  location = /pgadmin {
+    default_type text/plain;
+    return 426 'HTTPS is required for pgAdmin access.';
+  }
+
+  location /pgadmin/ {
+    default_type text/plain;
+    return 426 'HTTPS is required for pgAdmin access.';
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}
