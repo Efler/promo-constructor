@@ -19,9 +19,13 @@ RUN npm run build
 
 FROM nginx:1.29-alpine AS production
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.http.conf.template /opt/promo-constructor/nginx/nginx.http.conf.template
+COPY nginx.https.conf.template /opt/promo-constructor/nginx/nginx.https.conf.template
+COPY docker-entrypoint.d/40-configure-https.sh /docker-entrypoint.d/40-configure-https.sh
+RUN chmod +x /docker-entrypoint.d/40-configure-https.sh
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
+EXPOSE 443
 
 CMD ["nginx", "-g", "daemon off;"]

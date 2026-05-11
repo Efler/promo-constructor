@@ -80,8 +80,26 @@ services:
     depends_on:
       pc_backend:
         condition: service_healthy
+    environment:
+      FRONTEND_SERVER_NAMES: "${FRONTEND_SERVER_NAMES:-_}"
+      CERTBOT_CERT_NAME: "${CERTBOT_CERT_NAME:-}"
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "${FRONTEND_HTTP_PORT:-80}:80"
+      - "${FRONTEND_HTTPS_PORT:-443}:443"
+    volumes:
+      - letsencrypt_etc:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
+    networks:
+      - promo-constructor-network
+
+  certbot:
+    image: certbot/certbot:v5.5.0
+    profiles:
+      - certbot
+    volumes:
+      - letsencrypt_etc:/etc/letsencrypt
+      - letsencrypt_var:/var/lib/letsencrypt
+      - certbot_webroot:/var/www/certbot
     networks:
       - promo-constructor-network
 
@@ -92,3 +110,6 @@ networks:
 volumes:
   pc_postgres_data:
   pc_pgadmin_data:
+  letsencrypt_etc:
+  letsencrypt_var:
+  certbot_webroot:
