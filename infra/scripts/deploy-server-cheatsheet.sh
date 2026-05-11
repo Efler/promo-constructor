@@ -62,7 +62,7 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
 # - if your VPS provider has a cloud firewall/security group, make sure 80/443 are allowed there too
 #
 # Optional sanity-check for ACME webroot:
-# docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm certbot sh -c \
+# docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm --entrypoint sh certbot -c \
 #   "mkdir -p /var/www/certbot/.well-known/acme-challenge && echo ok > /var/www/certbot/.well-known/acme-challenge/test"
 # Then open:
 # http://your-domain.example/.well-known/acme-challenge/test
