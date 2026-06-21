@@ -3,9 +3,9 @@ requires = ["setuptools>=80.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "promo-constructor-backend"
+name = "promo-navigator-backend"
 version = "0.1.0"
-description = "FastAPI backend for Promo Constructor"
+description = "FastAPI backend for Promo Navigator"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.17.1,<1.18.0",

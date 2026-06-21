@@ -45,6 +45,7 @@ def list_products_for_seller_by_ids(
     statement: Select[tuple[Product]] = (
         select(Product)
         .where(Product.seller_id == seller_id, Product.id.in_(product_ids))
+        .options(selectinload(Product.items))
         .order_by(Product.id)
     )
     return list(db.execute(statement).scalars().all())

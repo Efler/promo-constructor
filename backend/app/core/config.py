@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Promo Constructor API"
+    PROJECT_NAME: str = "Promo Navigator API"
     VERSION: str = "0.1.0"
     ENVIRONMENT: str = "dev"
     API_V1_PREFIX: str = "/api/v1"
@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     )
     SECRET_KEY: str = "123456789"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 180
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 7200
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 7200
     ACCESS_COOKIE_NAME: str = "pc_access_token"
     REFRESH_COOKIE_NAME: str = "pc_refresh_token"
     COOKIE_SECURE: bool = False

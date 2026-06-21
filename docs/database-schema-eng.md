@@ -1,4 +1,4 @@
-# Promo Constructor Database Schema
+# Promo Navigator Database Schema
 
 ## Tables
 
@@ -9,6 +9,11 @@
 - `promocode_products`
 - `bundles`
 - `bundle_products`
+- `promotions`
+- `promotion_benefits`
+- `promotion_categories`
+- `promotion_participations`
+- `promotion_participation_products`
 - `refresh_sessions`
 
 ## Entity Overview
@@ -40,6 +45,26 @@ Seller-owned bundle campaign configuration for multi-product mechanics.
 ### `bundle_products`
 
 Product selection mapping for bundles, including regular eligible products and pair-specific product roles.
+
+### `promotions`
+
+Marketplace-owned promotion catalog entries with periods, seller-entry requirements, publishing state, and UI presentation metadata.
+
+### `promotion_benefits`
+
+Ordered promotion benefit descriptions. Each promotion can expose at most two benefits.
+
+### `promotion_categories`
+
+Allowed parent categories for promotions whose category scope is limited to selected categories.
+
+### `promotion_participations`
+
+Seller participation settings for a marketplace promotion, including the confirmed additional discount.
+
+### `promotion_participation_products`
+
+Seller-owned products selected for a concrete promotion participation.
 
 ### `refresh_sessions`
 
@@ -375,6 +400,144 @@ create unique index uq_bundle_products_pair_y
     where role = 'pair_y';
 
 
+create table promotions (
+    id bigserial primary key,
+    slug varchar(64) not null,
+    title varchar(120) not null,
+    short_description varchar(500) not null,
+    starts_on date not null,
+    ends_on date not null,
+    join_deadline date not null,
+    minimum_discount_percent smallint not null,
+    minimum_stock_qty integer not null default 0,
+    minimum_products integer not null default 1,
+    category_scope varchar(16) not null default 'all',
+    card_tone varchar(16) not null default 'brand',
+    is_featured boolean not null default false,
+    is_published boolean not null default true,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint uq_promotions_slug unique (slug),
+    constraint chk_promotions_slug_format check (
+        slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+    ),
+    constraint chk_promotions_title_not_blank check (length(btrim(title)) > 0),
+    constraint chk_promotions_description_not_blank check (
+        length(btrim(short_description)) > 0
+    ),
+    constraint chk_promotions_dates_order check (ends_on >= starts_on),
+    constraint chk_promotions_join_deadline check (join_deadline <= ends_on),
+    constraint chk_promotions_discount_range check (
+        minimum_discount_percent between 1 and 99
+    ),
+    constraint chk_promotions_stock_non_negative check (minimum_stock_qty >= 0),
+    constraint chk_promotions_minimum_products_positive check (minimum_products >= 1),
+    constraint chk_promotions_category_scope check (
+        category_scope in ('all', 'selected')
+    ),
+    constraint chk_promotions_card_tone check (
+        card_tone in ('brand', 'teal', 'orange', 'blue', 'grape')
+    )
+);
+
+create index ix_promotions_catalog_period
+    on promotions (starts_on, ends_on)
+    where is_published = true;
+create index ix_promotions_join_deadline_published
+    on promotions (join_deadline)
+    where is_published = true;
+
+
+create table promotion_benefits (
+    promotion_id bigint not null,
+    position smallint not null,
+    description varchar(255) not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_benefits primary key (promotion_id, position),
+    constraint fk_promotion_benefits_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete cascade,
+    constraint chk_promotion_benefits_position check (position between 1 and 2),
+    constraint chk_promotion_benefits_description_not_blank check (
+        length(btrim(description)) > 0
+    )
+);
+
+
+create table promotion_categories (
+    promotion_id bigint not null,
+    parent_id bigint not null,
+    parent_name varchar(255) not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_categories primary key (promotion_id, parent_id),
+    constraint fk_promotion_categories_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete cascade,
+    constraint chk_promotion_categories_parent_id_positive check (parent_id > 0),
+    constraint chk_promotion_categories_name_not_blank check (
+        length(btrim(parent_name)) > 0
+    )
+);
+
+create index ix_promotion_categories_parent_id
+    on promotion_categories (parent_id);
+
+
+create table promotion_participations (
+    id bigserial primary key,
+    promotion_id bigint not null,
+    seller_id bigint not null,
+    additional_discount_percent smallint not null,
+    price_change_confirmed_at timestamptz not null,
+    joined_at timestamptz not null default now(),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint fk_promotion_participations_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete restrict,
+    constraint fk_promotion_participations_seller_id
+        foreign key (seller_id)
+        references sellers(id)
+        on delete cascade,
+    constraint uq_promotion_participations_seller_promotion
+        unique (seller_id, promotion_id),
+    constraint chk_promotion_participations_discount_range check (
+        additional_discount_percent between 1 and 99
+    )
+);
+
+create index ix_promotion_participations_promotion_id
+    on promotion_participations (promotion_id);
+
+
+create table promotion_participation_products (
+    participation_id bigint not null,
+    product_id bigint not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_participation_products
+        primary key (participation_id, product_id),
+    constraint fk_promotion_participation_products_participation_id
+        foreign key (participation_id)
+        references promotion_participations(id)
+        on delete cascade,
+    constraint fk_promotion_participation_products_product_id
+        foreign key (product_id)
+        references products(id)
+        on delete no action
+);
+
+create index ix_promotion_participation_products_product_id
+    on promotion_participation_products (product_id);
+
+
 create table refresh_sessions (
     id uuid primary key,
     seller_id bigint not null,
@@ -404,7 +567,7 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `id` | `bigserial` | Internal seller identifier in Promo Constructor. |
+| `id` | `bigserial` | Internal seller identifier in Promo Navigator. |
 | `username` | `varchar(255)` | Login used for authentication. Must be unique. |
 | `password_hash` | `varchar(255)` | Hashed password. Raw password is never stored. |
 | `display_name` | `varchar(255)` | Human-readable seller name for UI and API responses. |
@@ -516,6 +679,66 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 | `role` | `varchar(16)` | Product role in the bundle: eligible, pair_x, or pair_y. |
 | `created_at` | `timestamptz` | When this product was linked to the bundle. |
 
+### `promotions`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | `bigserial` | Internal marketplace promotion identifier. |
+| `slug` | `varchar(64)` | Stable unique promotion identifier used in API routes and frontend URLs. |
+| `title` | `varchar(120)` | Promotion title displayed to sellers. |
+| `short_description` | `varchar(500)` | Short catalog-card and join-page description. |
+| `starts_on` | `date` | Promotion start date. |
+| `ends_on` | `date` | Promotion end date. |
+| `join_deadline` | `date` | Last date when sellers can join the promotion. |
+| `minimum_discount_percent` | `smallint` | Minimum additional discount required from a seller. |
+| `minimum_stock_qty` | `integer` | Minimum active stock required for every selected product. |
+| `minimum_products` | `integer` | Minimum number of products required for participation. |
+| `category_scope` | `varchar(16)` | Whether all parent categories or only selected categories are eligible. |
+| `card_tone` | `varchar(16)` | Controlled Mantine color token used for promotion-card presentation. |
+| `is_featured` | `boolean` | Whether the promotion receives emphasized card styling. |
+| `is_published` | `boolean` | Whether the promotion is visible in the seller catalog. |
+| `created_at` | `timestamptz` | Row creation timestamp. |
+| `updated_at` | `timestamptz` | Row update timestamp. |
+
+### `promotion_benefits`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `promotion_id` | `bigint` | Parent promotion. References `promotions.id`. |
+| `position` | `smallint` | Display position, limited to values 1 and 2. |
+| `description` | `varchar(255)` | Seller-facing benefit description. |
+| `created_at` | `timestamptz` | Row creation timestamp. |
+
+### `promotion_categories`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `promotion_id` | `bigint` | Parent promotion. References `promotions.id`. |
+| `parent_id` | `bigint` | Eligible product parent-category identifier matching `products.parent_id`. |
+| `parent_name` | `varchar(255)` | Category name stored for display and readable administration. |
+| `created_at` | `timestamptz` | Row creation timestamp. |
+
+### `promotion_participations`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | `bigserial` | Internal seller-participation identifier. |
+| `promotion_id` | `bigint` | Marketplace promotion. References `promotions.id`. |
+| `seller_id` | `bigint` | Participating seller. References `sellers.id`. |
+| `additional_discount_percent` | `smallint` | Additional discount applied to the current product price. |
+| `price_change_confirmed_at` | `timestamptz` | Moment when the seller confirmed promotional price changes. |
+| `joined_at` | `timestamptz` | Moment when the seller joined the promotion. |
+| `created_at` | `timestamptz` | Row creation timestamp. |
+| `updated_at` | `timestamptz` | Row update timestamp. |
+
+### `promotion_participation_products`
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `participation_id` | `bigint` | Seller participation. References `promotion_participations.id`. |
+| `product_id` | `bigint` | Selected seller product. References `products.id`. |
+| `created_at` | `timestamptz` | When the product was attached to the participation. |
+
 ### `refresh_sessions`
 
 | Field | Type | Meaning |
@@ -539,6 +762,12 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 - One `seller` -> many `bundles`
 - One `bundle` -> many `bundle_products`
 - One `product` -> many `bundle_products`
+- One `promotion` -> up to two `promotion_benefits`
+- One `promotion` -> many `promotion_categories`
+- One `promotion` -> many `promotion_participations`
+- One `seller` -> many `promotion_participations`
+- One `promotion_participation` -> many `promotion_participation_products`
+- One `product` -> many `promotion_participation_products`
 - One `seller` -> many `refresh_sessions`
 
 ## Implementation Notes
@@ -550,6 +779,14 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 - `bundle_products` should contain at least one row with `role = 'eligible'` when `bundles.product_scope = 'selected'`.
 - `bundle_products` should contain exactly one `pair_x` row and exactly one `pair_y` row when `bundles.product_scope = 'pair'`.
 - Bundle product ownership should be validated in application logic so selected products belong to the bundle seller.
+- `promotion_benefits` should contain one or two sequential rows with positions starting from 1.
+- `promotion_categories` should stay empty when `promotions.category_scope = 'all'`.
+- `promotion_categories` should contain at least one row when `promotions.category_scope = 'selected'`.
+- Promotion status (`upcoming`, `active`, `completed`) should be derived from `starts_on` and `ends_on`.
+- Participation status (`scheduled`, `active`, `completed`) should be derived from the linked promotion period.
+- Promotion joining should validate publication state, join deadline, minimum additional discount, minimum product count, product ownership, active stock, and eligible parent categories in application logic.
+- Every product selected for a participation must belong to the participation seller.
+- The additional promotion discount is applied to the current item price and should be calculated per active `product_item`.
 - Validation for "start date is not earlier than tomorrow and not later than three months from creation" should be enforced in application logic.
 - `refresh_token_hash` should be compared by hashing the incoming refresh token value, not by storing raw token text.
 - Access tokens can stay short-lived JWTs in `httpOnly` cookies.

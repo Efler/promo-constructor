@@ -1,1 +1,1 @@
-"""Promo Constructor backend application package."""
+"""Promo Navigator backend application package."""

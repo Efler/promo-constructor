@@ -7,6 +7,7 @@ export type SellerProductPreviewItem = {
   brand: string | null
   description: string | null
   subject_name: string | null
+  parent_id: number | null
   parent_name: string | null
   main_photo_url: string | null
   is_active: boolean

@@ -1,4 +1,4 @@
-import { Box, Button, Container, Group, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Box, Button, Container, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { IconArrowRight, IconLock, IconUserCircle } from '@tabler/icons-react'
 import { notifications } from '@mantine/notifications'
@@ -68,111 +68,66 @@ export function LoginPage() {
 
   return (
     <Box className="auth-page">
-      <Box h={28} bg="#9A41FE" />
+      <Box h={6} bg="brand.6" />
 
-      <Container size={1180} py={{ base: 40, md: 72 }}>
-        <Group align="stretch" gap="xl">
+      <Container
+        size={440}
+        py={{ base: 48, sm: 72 }}
+        style={{
+          minHeight: 'calc(100vh - 6px)',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <Stack gap="xl" w="100%">
+          <Stack gap={6} align="center">
+            <Title order={1} ta="center" c="dark.8">
+              Промо-навигатор
+            </Title>
+            <Text c="dimmed" ta="center">
+              Вход в кабинет продавца
+            </Text>
+          </Stack>
+
           <Paper
-            flex={1}
             radius="xl"
-            p={{ base: 'xl', md: 44 }}
+            p={{ base: 'xl', sm: 36 }}
             shadow="md"
             style={{
               border: '1px solid rgba(154, 65, 254, 0.1)',
-              background: 'rgba(255, 255, 255, 0.88)',
+              background: 'rgba(255, 255, 255, 0.94)',
               backdropFilter: 'blur(16px)',
             }}
           >
-            <Stack gap="xl" justify="space-between" h="100%">
-              <div>
-                <Text c="brand.7" fw={700} tt="uppercase" size="sm" mb="md">
-                  Promo Constructor
-                </Text>
-                <Title order={1} maw={520}>
-                  Войдите в кабинет продавца и управляйте механиками продвижения.
-                </Title>
-                <Text c="dimmed" size="lg" mt="md" maw={540}>
-                  В одном кабинете собраны инструменты для работы с акциями,
-                  промокодами и комплектами товаров.
-                </Text>
-              </div>
-
-              <Group gap="md" wrap="wrap">
-                <Paper radius="xl" p="md" bg="brand.0">
-                  <Text fw={600}>Промокоды</Text>
-                  <Text size="sm" c="dimmed" mt={6}>
-                    Скидки, лимиты, срок действия.
-                  </Text>
-                </Paper>
-                <Paper radius="xl" p="md" bg="brand.0">
-                  <Text fw={600}>Комплекты</Text>
-                  <Text size="sm" c="dimmed" mt={6}>
-                    Наборы товаров и бонусы.
-                  </Text>
-                </Paper>
-                <Paper radius="xl" p="md" bg="brand.0">
-                  <Text fw={600}>Акции</Text>
-                  <Text size="sm" c="dimmed" mt={6}>
-                    Кампании и правила показа.
-                  </Text>
-                </Paper>
-              </Group>
-            </Stack>
+            <form onSubmit={form.onSubmit(handleSubmit)}>
+              <Stack gap="md">
+                <TextInput
+                  label="Логин"
+                  placeholder="Введите логин"
+                  size="md"
+                  leftSection={<IconUserCircle size={18} />}
+                  {...form.getInputProps('username')}
+                />
+                <PasswordInput
+                  label="Пароль"
+                  placeholder="Введите пароль"
+                  size="md"
+                  leftSection={<IconLock size={18} />}
+                  {...form.getInputProps('password')}
+                />
+                <Button
+                  type="submit"
+                  size="md"
+                  color="brand"
+                  mt="xs"
+                  rightSection={<IconArrowRight size={18} />}
+                >
+                  Войти
+                </Button>
+              </Stack>
+            </form>
           </Paper>
-
-          <Paper
-            w={{ base: '100%', md: 430 }}
-            radius="xl"
-            p={{ base: 'xl', md: 36 }}
-            shadow="md"
-            style={{
-              border: '1px solid rgba(154, 65, 254, 0.1)',
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(244,239,252,0.96))',
-            }}
-          >
-            <Stack gap="lg">
-              <Group gap="sm">
-                <IconUserCircle size={28} color="#9A41FE" />
-                <div>
-                  <Title order={3}>Вход в кабинет</Title>
-                  <Text size="sm" c="dimmed">
-                    Используйте логин и пароль от аккаунта продавца
-                  </Text>
-                </div>
-              </Group>
-
-              <form onSubmit={form.onSubmit(handleSubmit)}>
-                <Stack gap="md">
-                  <TextInput
-                    label="Логин"
-                    placeholder="Введите логин"
-                    leftSection={<IconUserCircle size={18} />}
-                    {...form.getInputProps('username')}
-                  />
-                  <PasswordInput
-                    label="Пароль"
-                    placeholder="Введите пароль"
-                    leftSection={<IconLock size={18} />}
-                    {...form.getInputProps('password')}
-                  />
-                  <Button
-                    type="submit"
-                    size="md"
-                    color="brand"
-                    rightSection={<IconArrowRight size={18} />}
-                  >
-                    Войти в кабинет
-                  </Button>
-                </Stack>
-              </form>
-
-              <Text size="sm" c="dimmed">
-                Если не удается войти, проверьте данные для входа и попробуйте еще раз.
-              </Text>
-            </Stack>
-          </Paper>
-        </Group>
+        </Stack>
       </Container>
     </Box>
   )
