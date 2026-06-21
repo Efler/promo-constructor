@@ -45,5 +45,5 @@ frontend/*.tsbuildinfo
 
 # CICD
 /infra/scripts/redeploy-app.sh
+/infra/scripts/ollama-runtime.md
 .github
-
