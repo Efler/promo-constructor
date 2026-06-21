@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.bundle import Bundle
     from app.models.promocode import Promocode
     from app.models.product import Product
+    from app.models.promotion_participation import PromotionParticipation
     from app.models.refresh_session import RefreshSession
 
 
@@ -46,6 +47,10 @@ class Seller(TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     bundles: Mapped[list["Bundle"]] = relationship(
+        back_populates="seller",
+        cascade="all, delete-orphan",
+    )
+    promotion_participations: Mapped[list["PromotionParticipation"]] = relationship(
         back_populates="seller",
         cascade="all, delete-orphan",
     )

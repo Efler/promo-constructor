@@ -89,6 +89,7 @@ class ProductBundleCard(BaseModel):
     brand: str | None
     description: str | None
     subject_name: str | None
+    parent_id: int | None
     parent_name: str | None
     main_photo_url: str | None
     is_active: bool

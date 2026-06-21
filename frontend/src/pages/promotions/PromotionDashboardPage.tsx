@@ -31,14 +31,14 @@ import {
 } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import {
-  getMarketplacePromotionStatus,
-  isDateInsidePromotion,
-  isPromotionJoinOpen,
-  marketplacePromotions,
   type MarketplacePromotion,
   type MarketplacePromotionStatus,
-} from '../../features/promotions/catalog'
-import { usePromotionParticipationsQuery } from '../../features/promotions/use-promotions'
+} from '../../features/promotions/api'
+import { isDateInsidePromotion } from '../../features/promotions/utils'
+import {
+  usePromotionParticipationsQuery,
+  usePromotionsQuery,
+} from '../../features/promotions/use-promotions'
 
 dayjs.locale('ru')
 
@@ -85,8 +85,8 @@ function PromotionCard({
   participating: boolean
   onJoin: () => void
 }) {
-  const status = getMarketplacePromotionStatus(promotion)
-  const joinOpen = isPromotionJoinOpen(promotion)
+  const status = promotion.status
+  const joinOpen = promotion.join_open
   const categories =
     promotion.eligible_parent_names === null
       ? 'Все категории'
@@ -99,9 +99,9 @@ function PromotionCard({
       shadow="sm"
       style={{
         height: '100%',
-        border: `1px solid var(--mantine-color-${promotion.tone}-2)`,
-        background: promotion.featured
-          ? `linear-gradient(145deg, var(--mantine-color-${promotion.tone}-0), #ffffff 70%)`
+        border: `1px solid var(--mantine-color-${promotion.card_tone}-2)`,
+        background: promotion.is_featured
+          ? `linear-gradient(145deg, var(--mantine-color-${promotion.card_tone}-0), #ffffff 70%)`
           : 'rgba(255, 255, 255, 0.98)',
       }}
     >
@@ -182,7 +182,7 @@ function PromotionCard({
                   size={20}
                   radius="xl"
                   variant="light"
-                  color={promotion.tone}
+                  color={promotion.card_tone}
                   mt={1}
                 >
                   <IconSparkles size={12} />
@@ -249,26 +249,33 @@ export function PromotionDashboardPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(
     dayjs().format('YYYY-MM-DD'),
   )
+  const promotionsQuery = usePromotionsQuery()
   const participationsQuery = usePromotionParticipationsQuery()
-  const participations = participationsQuery.data?.items ?? []
+  const promotions = useMemo(
+    () => promotionsQuery.data ?? [],
+    [promotionsQuery.data],
+  )
+  const participations = participationsQuery.data ?? []
   const currentParticipations = participations.filter(
     (participation) => participation.status !== 'completed',
   )
   const participationPromotionIds = new Set(
-    currentParticipations.map((participation) => participation.promotion_id),
+    currentParticipations.map((participation) => participation.promotion_slug),
   )
 
   const visiblePromotions = useMemo(() => {
     if (!selectedDate) {
-      return marketplacePromotions
+      return promotions
     }
 
-    return marketplacePromotions.filter((promotion) =>
+    return promotions.filter((promotion) =>
       isDateInsidePromotion(selectedDate, promotion),
     )
-  }, [selectedDate])
+  }, [promotions, selectedDate])
 
-  const availablePromotionCount = marketplacePromotions.filter(isPromotionJoinOpen).length
+  const availablePromotionCount = promotions.filter(
+    (promotion) => promotion.join_open,
+  ).length
 
   const participatingProductsCount = new Set(
     currentParticipations.flatMap((participation) => participation.selected_product_ids),
@@ -344,12 +351,33 @@ export function PromotionDashboardPage() {
               Доступные акции
             </Tabs.Tab>
             <Tabs.Tab value="mine" leftSection={<IconListCheck size={16} />}>
-              Мои участия
-              {participations.length > 0 ? (
-                <Badge ml="xs" size="xs" circle color="brand">
-                  {participations.length}
-                </Badge>
-              ) : null}
+              <Group gap="xs" wrap="nowrap">
+                <span>Мои участия</span>
+                {participations.length > 0 ? (
+                  <Badge
+                    color="brand"
+                    p={0}
+                    w={18}
+                    h={18}
+                    styles={{
+                      root: {
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      },
+                      label: {
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                      },
+                    }}
+                  >
+                    {participations.length}
+                  </Badge>
+                ) : null}
+              </Group>
             </Tabs.Tab>
           </Tabs.List>
 
@@ -382,7 +410,7 @@ export function PromotionDashboardPage() {
                     highlightToday
                     size="md"
                     renderDay={(date) => {
-                      const promotionsOnDate = marketplacePromotions.filter((promotion) =>
+                      const promotionsOnDate = promotions.filter((promotion) =>
                         isDateInsidePromotion(date, promotion),
                       )
 
@@ -398,7 +426,7 @@ export function PromotionDashboardPage() {
                                   key={promotion.id}
                                   w={4}
                                   h={4}
-                                  bg={`${promotion.tone}.6`}
+                                  bg={`${promotion.card_tone}.6`}
                                   style={{ borderRadius: 999 }}
                                 />
                               ))}
@@ -441,16 +469,36 @@ export function PromotionDashboardPage() {
                   </div>
                 </Group>
 
-                {visiblePromotions.length > 0 ? (
+                {promotionsQuery.isLoading ? (
+                  <Group justify="center" py="xl">
+                    <Loader color="brand" />
+                  </Group>
+                ) : null}
+
+                {!promotionsQuery.isLoading && promotionsQuery.isError ? (
+                  <Alert
+                    radius="lg"
+                    color="red"
+                    variant="light"
+                    icon={<IconAlertCircle size={18} />}
+                    title="Не удалось загрузить акции"
+                  >
+                    Попробуйте обновить страницу чуть позже.
+                  </Alert>
+                ) : null}
+
+                {!promotionsQuery.isLoading &&
+                !promotionsQuery.isError &&
+                visiblePromotions.length > 0 ? (
                   <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="md">
                     {visiblePromotions.map((promotion) => (
                       <PromotionCard
                         key={promotion.id}
                         promotion={promotion}
-                        participating={participationPromotionIds.has(promotion.id)}
+                        participating={participationPromotionIds.has(promotion.slug)}
                         onJoin={() => {
-                          if (!participationPromotionIds.has(promotion.id)) {
-                            navigate(`/app/promotions/${promotion.id}/join`)
+                          if (!participationPromotionIds.has(promotion.slug)) {
+                            navigate(`/app/promotions/${promotion.slug}/join`)
                           } else {
                             setActiveTab('mine')
                           }
@@ -458,7 +506,7 @@ export function PromotionDashboardPage() {
                       />
                     ))}
                   </SimpleGrid>
-                ) : (
+                ) : !promotionsQuery.isLoading && !promotionsQuery.isError ? (
                   <Paper
                     radius="xl"
                     p="xl"
@@ -474,7 +522,7 @@ export function PromotionDashboardPage() {
                       </Text>
                     </Stack>
                   </Paper>
-                )}
+                ) : null}
               </Stack>
             </SimpleGrid>
           </Tabs.Panel>
@@ -490,7 +538,7 @@ export function PromotionDashboardPage() {
                 <div>
                   <Title order={3}>Акции, в которых вы участвуете</Title>
                   <Text c="dimmed" mt="sm">
-                    Данные загружаются из текущего backend-модуля `/promotions`.
+                    Здесь отображаются ваши текущие и запланированные участия.
                   </Text>
                 </div>
 
@@ -508,7 +556,7 @@ export function PromotionDashboardPage() {
                     icon={<IconAlertCircle size={18} />}
                     title="Не удалось загрузить участия"
                   >
-                    Каталог акций доступен, но backend не вернул данные продавца.
+                    Попробуйте обновить страницу чуть позже.
                   </Alert>
                 ) : null}
 
@@ -526,8 +574,7 @@ export function PromotionDashboardPage() {
                       </ThemeIcon>
                       <Text fw={700}>Вы пока не участвуете в акциях</Text>
                       <Text size="sm" c="dimmed" ta="center" maw={560}>
-                        Выберите подходящую кампанию и подготовьте товары. Сохранение
-                        участия появится на следующем backend-этапе.
+                        Выберите подходящую кампанию и добавьте товары для участия.
                       </Text>
                       <Button radius="xl" mt="sm" onClick={handleOpenCatalog}>
                         Посмотреть доступные акции
@@ -570,7 +617,8 @@ export function PromotionDashboardPage() {
                               Товаров: <b>{participation.selected_product_ids.length}</b>
                             </Text>
                             <Text size="sm">
-                              Скидка: <b>{participation.discount_percent}%</b>
+                              Скидка:{' '}
+                              <b>{participation.additional_discount_percent}%</b>
                             </Text>
                           </Group>
                         </Stack>

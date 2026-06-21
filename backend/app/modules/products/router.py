@@ -50,6 +50,7 @@ def list_products_for_bundles(
                 brand=product.brand,
                 description=product.description,
                 subject_name=product.subject_name,
+                parent_id=product.parent_id,
                 parent_name=product.parent_name,
                 main_photo_url=product.main_photo_url,
                 is_active=product.is_active,

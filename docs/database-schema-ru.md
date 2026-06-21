@@ -9,6 +9,11 @@
 - `promocode_products`
 - `bundles`
 - `bundle_products`
+- `promotions`
+- `promotion_benefits`
+- `promotion_categories`
+- `promotion_participations`
+- `promotion_participation_products`
 - `refresh_sessions`
 
 ## Обзор Сущностей
@@ -40,6 +45,26 @@
 ### `bundle_products`
 
 Связка комплекта с товарами, включая обычные выбранные товары и роли товаров для парных комплектов.
+
+### `promotions`
+
+Каталог акций маркетплейса со сроками, требованиями для вступления, состоянием публикации и метаданными оформления UI.
+
+### `promotion_benefits`
+
+Упорядоченные описания преимуществ акции. У одной акции может быть не более двух преимуществ.
+
+### `promotion_categories`
+
+Допустимые родительские категории для акций, ограниченных выбранными категориями.
+
+### `promotion_participations`
+
+Настройки участия продавца в акции маркетплейса, включая подтверждённую дополнительную скидку.
+
+### `promotion_participation_products`
+
+Товары продавца, выбранные для конкретного участия в акции.
 
 ### `refresh_sessions`
 
@@ -375,6 +400,144 @@ create unique index uq_bundle_products_pair_y
     where role = 'pair_y';
 
 
+create table promotions (
+    id bigserial primary key,
+    slug varchar(64) not null,
+    title varchar(120) not null,
+    short_description varchar(500) not null,
+    starts_on date not null,
+    ends_on date not null,
+    join_deadline date not null,
+    minimum_discount_percent smallint not null,
+    minimum_stock_qty integer not null default 0,
+    minimum_products integer not null default 1,
+    category_scope varchar(16) not null default 'all',
+    card_tone varchar(16) not null default 'brand',
+    is_featured boolean not null default false,
+    is_published boolean not null default true,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint uq_promotions_slug unique (slug),
+    constraint chk_promotions_slug_format check (
+        slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+    ),
+    constraint chk_promotions_title_not_blank check (length(btrim(title)) > 0),
+    constraint chk_promotions_description_not_blank check (
+        length(btrim(short_description)) > 0
+    ),
+    constraint chk_promotions_dates_order check (ends_on >= starts_on),
+    constraint chk_promotions_join_deadline check (join_deadline <= ends_on),
+    constraint chk_promotions_discount_range check (
+        minimum_discount_percent between 1 and 99
+    ),
+    constraint chk_promotions_stock_non_negative check (minimum_stock_qty >= 0),
+    constraint chk_promotions_minimum_products_positive check (minimum_products >= 1),
+    constraint chk_promotions_category_scope check (
+        category_scope in ('all', 'selected')
+    ),
+    constraint chk_promotions_card_tone check (
+        card_tone in ('brand', 'teal', 'orange', 'blue', 'grape')
+    )
+);
+
+create index ix_promotions_catalog_period
+    on promotions (starts_on, ends_on)
+    where is_published = true;
+create index ix_promotions_join_deadline_published
+    on promotions (join_deadline)
+    where is_published = true;
+
+
+create table promotion_benefits (
+    promotion_id bigint not null,
+    position smallint not null,
+    description varchar(255) not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_benefits primary key (promotion_id, position),
+    constraint fk_promotion_benefits_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete cascade,
+    constraint chk_promotion_benefits_position check (position between 1 and 2),
+    constraint chk_promotion_benefits_description_not_blank check (
+        length(btrim(description)) > 0
+    )
+);
+
+
+create table promotion_categories (
+    promotion_id bigint not null,
+    parent_id bigint not null,
+    parent_name varchar(255) not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_categories primary key (promotion_id, parent_id),
+    constraint fk_promotion_categories_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete cascade,
+    constraint chk_promotion_categories_parent_id_positive check (parent_id > 0),
+    constraint chk_promotion_categories_name_not_blank check (
+        length(btrim(parent_name)) > 0
+    )
+);
+
+create index ix_promotion_categories_parent_id
+    on promotion_categories (parent_id);
+
+
+create table promotion_participations (
+    id bigserial primary key,
+    promotion_id bigint not null,
+    seller_id bigint not null,
+    additional_discount_percent smallint not null,
+    price_change_confirmed_at timestamptz not null,
+    joined_at timestamptz not null default now(),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+
+    constraint fk_promotion_participations_promotion_id
+        foreign key (promotion_id)
+        references promotions(id)
+        on delete restrict,
+    constraint fk_promotion_participations_seller_id
+        foreign key (seller_id)
+        references sellers(id)
+        on delete cascade,
+    constraint uq_promotion_participations_seller_promotion
+        unique (seller_id, promotion_id),
+    constraint chk_promotion_participations_discount_range check (
+        additional_discount_percent between 1 and 99
+    )
+);
+
+create index ix_promotion_participations_promotion_id
+    on promotion_participations (promotion_id);
+
+
+create table promotion_participation_products (
+    participation_id bigint not null,
+    product_id bigint not null,
+    created_at timestamptz not null default now(),
+
+    constraint pk_promotion_participation_products
+        primary key (participation_id, product_id),
+    constraint fk_promotion_participation_products_participation_id
+        foreign key (participation_id)
+        references promotion_participations(id)
+        on delete cascade,
+    constraint fk_promotion_participation_products_product_id
+        foreign key (product_id)
+        references products(id)
+        on delete no action
+);
+
+create index ix_promotion_participation_products_product_id
+    on promotion_participation_products (product_id);
+
+
 create table refresh_sessions (
     id uuid primary key,
     seller_id bigint not null,
@@ -516,6 +679,66 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 | `role` | `varchar(16)` | Роль товара в комплекте: eligible, pair_x или pair_y. |
 | `created_at` | `timestamptz` | Когда товар был привязан к комплекту. |
 
+### `promotions`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `id` | `bigserial` | Внутренний идентификатор акции маркетплейса. |
+| `slug` | `varchar(64)` | Стабильный уникальный идентификатор для API и frontend URL. |
+| `title` | `varchar(120)` | Название акции, отображаемое продавцам. |
+| `short_description` | `varchar(500)` | Краткое описание для карточки каталога и страницы вступления. |
+| `starts_on` | `date` | Дата начала акции. |
+| `ends_on` | `date` | Дата окончания акции. |
+| `join_deadline` | `date` | Последняя дата вступления продавцов. |
+| `minimum_discount_percent` | `smallint` | Минимальная дополнительная скидка продавца. |
+| `minimum_stock_qty` | `integer` | Минимальный активный остаток каждого выбранного товара. |
+| `minimum_products` | `integer` | Минимальное количество товаров для участия. |
+| `category_scope` | `varchar(16)` | Допустимы все родительские категории или только выбранные. |
+| `card_tone` | `varchar(16)` | Контролируемый цвет Mantine для оформления карточки акции. |
+| `is_featured` | `boolean` | Используется ли усиленное оформление карточки. |
+| `is_published` | `boolean` | Отображается ли акция в каталоге продавца. |
+| `created_at` | `timestamptz` | Время создания записи. |
+| `updated_at` | `timestamptz` | Время последнего обновления записи. |
+
+### `promotion_benefits`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `promotion_id` | `bigint` | Родительская акция. Ссылка на `promotions.id`. |
+| `position` | `smallint` | Позиция отображения, ограниченная значениями 1 и 2. |
+| `description` | `varchar(255)` | Описание преимущества для продавца. |
+| `created_at` | `timestamptz` | Время создания записи. |
+
+### `promotion_categories`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `promotion_id` | `bigint` | Родительская акция. Ссылка на `promotions.id`. |
+| `parent_id` | `bigint` | Допустимый идентификатор родительской категории, соответствующий `products.parent_id`. |
+| `parent_name` | `varchar(255)` | Название категории для отображения и удобного администрирования. |
+| `created_at` | `timestamptz` | Время создания записи. |
+
+### `promotion_participations`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `id` | `bigserial` | Внутренний идентификатор участия продавца. |
+| `promotion_id` | `bigint` | Акция маркетплейса. Ссылка на `promotions.id`. |
+| `seller_id` | `bigint` | Участвующий продавец. Ссылка на `sellers.id`. |
+| `additional_discount_percent` | `smallint` | Дополнительная скидка от текущей цены товара. |
+| `price_change_confirmed_at` | `timestamptz` | Момент подтверждения продавцом изменения акционных цен. |
+| `joined_at` | `timestamptz` | Момент вступления продавца в акцию. |
+| `created_at` | `timestamptz` | Время создания записи. |
+| `updated_at` | `timestamptz` | Время последнего обновления записи. |
+
+### `promotion_participation_products`
+
+| Поле | Тип | Смысл |
+| --- | --- | --- |
+| `participation_id` | `bigint` | Участие продавца. Ссылка на `promotion_participations.id`. |
+| `product_id` | `bigint` | Выбранный товар продавца. Ссылка на `products.id`. |
+| `created_at` | `timestamptz` | Когда товар был добавлен в участие. |
+
 ### `refresh_sessions`
 
 | Поле | Тип | Смысл |
@@ -539,6 +762,12 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 - Один `seller` -> много `bundles`
 - Один `bundle` -> много `bundle_products`
 - Один `product` -> много `bundle_products`
+- Одна `promotion` -> не более двух `promotion_benefits`
+- Одна `promotion` -> много `promotion_categories`
+- Одна `promotion` -> много `promotion_participations`
+- Один `seller` -> много `promotion_participations`
+- Одна `promotion_participation` -> много `promotion_participation_products`
+- Один `product` -> много `promotion_participation_products`
 - Один `seller` -> много `refresh_sessions`
 
 ## Примечания К Реализации
@@ -550,6 +779,14 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 - `bundle_products` должна содержать хотя бы одну строку с `role = 'eligible'`, когда `bundles.product_scope = 'selected'`.
 - `bundle_products` должна содержать ровно одну строку `pair_x` и ровно одну строку `pair_y`, когда `bundles.product_scope = 'pair'`.
 - Принадлежность выбранных товаров тому же селлеру, что и комплект, должна проверяться в прикладной логике.
+- `promotion_benefits` должна содержать одну или две последовательные строки с позициями начиная с 1.
+- `promotion_categories` должна оставаться пустой, когда `promotions.category_scope = 'all'`.
+- `promotion_categories` должна содержать хотя бы одну строку, когда `promotions.category_scope = 'selected'`.
+- Статус акции (`upcoming`, `active`, `completed`) должен вычисляться по `starts_on` и `ends_on`.
+- Статус участия (`scheduled`, `active`, `completed`) должен вычисляться по периоду связанной акции.
+- При вступлении нужно проверять публикацию акции, срок вступления, минимальную дополнительную скидку, количество товаров, принадлежность товаров продавцу, активный остаток и допустимые родительские категории.
+- Каждый товар участия должен принадлежать тому же продавцу, что и `promotion_participations.seller_id`.
+- Дополнительная скидка акции применяется к текущей цене и должна рассчитываться отдельно для каждого активного `product_item`.
 - Валидация правил "дата старта не раньше завтрашнего дня и не позже трех месяцев от момента создания" должна выполняться в прикладной логике.
 - `refresh_token_hash` нужно сравнивать через хеширование входящего refresh-токена, а не хранить сырой текст токена.
 - Access tokens могут оставаться короткоживущими JWT в `httpOnly` cookies.

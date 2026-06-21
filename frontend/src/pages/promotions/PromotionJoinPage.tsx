@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ru'
 import {
@@ -9,6 +9,7 @@ import {
   Checkbox,
   Group,
   Image,
+  Loader,
   Paper,
   SegmentedControl,
   SimpleGrid,
@@ -22,6 +23,7 @@ import {
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   IconAlertCircle,
   IconArrowLeft,
@@ -43,11 +45,14 @@ import {
   useSellerProductPreviewQuery,
 } from '../../features/products/use-seller-product-preview'
 import {
-  getMarketplacePromotion,
-  isPromotionJoinOpen,
+  createPromotionParticipation,
   type MarketplacePromotion,
-} from '../../features/promotions/catalog'
-import { usePromotionParticipationsQuery } from '../../features/promotions/use-promotions'
+} from '../../features/promotions/api'
+import {
+  usePromotionParticipationsQuery,
+  usePromotionQuery,
+} from '../../features/promotions/use-promotions'
+import { ApiError } from '../../shared/api/client'
 
 dayjs.locale('ru')
 
@@ -62,6 +67,27 @@ type PromotionJoinFormValues = {
 type ProductEligibility = {
   eligible: boolean
   reasons: string[]
+}
+
+function getApiErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError) || typeof error.data !== 'object' || error.data === null) {
+    return null
+  }
+
+  const detail = 'detail' in error.data ? (error.data as { detail?: unknown }).detail : null
+  if (typeof detail === 'string') {
+    return detail
+  }
+
+  if (Array.isArray(detail)) {
+    const firstItem = detail[0]
+    if (typeof firstItem === 'object' && firstItem !== null && 'msg' in firstItem) {
+      const message = (firstItem as { msg?: unknown }).msg
+      return typeof message === 'string' ? message : null
+    }
+  }
+
+  return null
 }
 
 function getProductEligibility(
@@ -79,8 +105,9 @@ function getProductEligibility(
   }
 
   if (
-    promotion.eligible_parent_names !== null &&
-    (!product.parent_name || !promotion.eligible_parent_names.includes(product.parent_name))
+    promotion.category_scope === 'selected' &&
+    (product.parent_id === null ||
+      !promotion.eligible_parent_ids.includes(product.parent_id))
   ) {
     reasons.push('Категория не участвует')
   }
@@ -247,11 +274,10 @@ function Requirement({
   )
 }
 
-export function PromotionJoinPage() {
-  const { promotionId } = useParams()
-  const promotion = getMarketplacePromotion(promotionId)
+function PromotionJoinForm({ promotion }: { promotion: MarketplacePromotion }) {
   const navigate = useNavigate()
   const { seller } = useAuth()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [productFilter, setProductFilter] = useState<ProductFilter>('eligible')
   const productsQuery = useSellerProductPreviewQuery({
@@ -259,19 +285,23 @@ export function PromotionJoinPage() {
     enabled: promotion !== null,
   })
   const participationsQuery = usePromotionParticipationsQuery()
+  const createParticipationMutation = useMutation({
+    mutationFn: (values: PromotionJoinFormValues) =>
+      createPromotionParticipation(promotion.slug, {
+        additional_discount_percent: Number(values.discountPercent),
+        selected_product_ids: values.selectedProductIds,
+        price_change_confirmed: values.acceptedPriceChange,
+      }),
+  })
 
   const form = useForm<PromotionJoinFormValues>({
     initialValues: {
-      discountPercent: String(promotion?.minimum_discount_percent ?? ''),
+      discountPercent: String(promotion.minimum_discount_percent),
       selectedProductIds: [],
       acceptedPriceChange: false,
     },
     validate: {
       discountPercent: (value) => {
-        if (!promotion) {
-          return null
-        }
-
         if (!/^\d+$/.test(value)) {
           return 'Укажите скидку целым числом.'
         }
@@ -287,10 +317,6 @@ export function PromotionJoinPage() {
         return null
       },
       selectedProductIds: (value) => {
-        if (!promotion) {
-          return null
-        }
-
         if (value.length < promotion.minimum_products) {
           return `Для участия выберите минимум ${promotion.minimum_products} товар(а).`
         }
@@ -305,14 +331,10 @@ export function PromotionJoinPage() {
   const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data])
   const normalizedSearch = search.trim().toLocaleLowerCase('ru-RU')
   const targetDiscount = Number(form.values.discountPercent) || 0
-  const eligibleProducts = promotion
-    ? products.filter((product) => getProductEligibility(product, promotion).eligible)
-    : []
+  const eligibleProducts = products.filter(
+    (product) => getProductEligibility(product, promotion).eligible,
+  )
   const visibleProducts = useMemo(() => {
-    if (!promotion) {
-      return []
-    }
-
     return products.filter((product) => {
       const eligibility = getProductEligibility(product, promotion)
       const matchesFilter = productFilter === 'all' || eligibility.eligible
@@ -330,34 +352,10 @@ export function PromotionJoinPage() {
     })
   }, [normalizedSearch, productFilter, products, promotion])
 
-  if (!promotion) {
-    return (
-      <Paper
-        radius="xl"
-        p="xl"
-        shadow="sm"
-        style={{ border: '1px solid rgba(154, 65, 254, 0.1)' }}
-      >
-        <Stack align="center" gap="md">
-          <ThemeIcon size={54} radius="xl" variant="light" color="red">
-            <IconAlertCircle size={25} />
-          </ThemeIcon>
-          <Title order={2}>Акция не найдена</Title>
-          <Text c="dimmed" ta="center">
-            Возможно, ссылка устарела или кампания больше недоступна.
-          </Text>
-          <Button radius="xl" onClick={() => navigate('/app/promotions')}>
-            Вернуться к календарю
-          </Button>
-        </Stack>
-      </Paper>
-    )
-  }
-
-  const joinOpen = isPromotionJoinOpen(promotion)
-  const alreadyParticipating = (participationsQuery.data?.items ?? []).some(
+  const joinOpen = promotion.join_open
+  const alreadyParticipating = (participationsQuery.data ?? []).some(
     (participation) =>
-      participation.promotion_id === promotion.id &&
+      participation.promotion_slug === promotion.slug &&
       participation.status !== 'completed',
   )
   const selectedProducts = products.filter((product) =>
@@ -373,17 +371,46 @@ export function PromotionJoinPage() {
     form.clearFieldError('selectedProductIds')
   }
 
-  function handleSubmit() {
-    if (!joinOpen || alreadyParticipating) {
+  async function handleSubmit(values: PromotionJoinFormValues) {
+    if (
+      !joinOpen ||
+      alreadyParticipating ||
+      participationsQuery.isLoading ||
+      createParticipationMutation.isPending
+    ) {
       return
     }
 
-    notifications.show({
-      color: 'brand',
-      title: 'Настройки участия готовы',
-      message:
-        'Товары и скидка проверены. Сохранение участия будет подключено на backend-этапе.',
-    })
+    try {
+      await createParticipationMutation.mutateAsync(values)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['promotions', 'participations'] }),
+        queryClient.invalidateQueries({ queryKey: ['promotions', 'catalog'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['promotions', 'detail', promotion.slug],
+        }),
+      ])
+      notifications.show({
+        color: 'brand',
+        title: 'Участие оформлено',
+        message: `Товары добавлены в акцию «${promotion.title}».`,
+      })
+      navigate('/app/promotions')
+    } catch (error) {
+      const message = getApiErrorMessage(error)
+      if (message?.includes('stock') || message?.includes('category')) {
+        form.setFieldError(
+          'selectedProductIds',
+          'Проверьте выбранные товары: условия акции или остатки изменились.',
+        )
+      }
+
+      notifications.show({
+        color: 'red',
+        title: 'Не удалось вступить в акцию',
+        message: message ?? 'Проверьте выбранные товары и настройки скидки.',
+      })
+    }
   }
 
   return (
@@ -406,14 +433,14 @@ export function PromotionJoinPage() {
           p={{ base: 'lg', md: 'xl' }}
           shadow="md"
           style={{
-            border: `1px solid var(--mantine-color-${promotion.tone}-2)`,
-            background: `linear-gradient(145deg, var(--mantine-color-${promotion.tone}-0), #ffffff 72%)`,
+            border: `1px solid var(--mantine-color-${promotion.card_tone}-2)`,
+            background: `linear-gradient(145deg, var(--mantine-color-${promotion.card_tone}-0), #ffffff 72%)`,
           }}
         >
           <Stack gap="lg">
             <Group justify="space-between" align="start" gap="lg">
               <div>
-                <Badge color={promotion.tone} variant="light" mb="md">
+                <Badge color={promotion.card_tone} variant="light" mb="md">
                   Присоединение к акции
                 </Badge>
                 <Title order={1}>{promotion.title}</Title>
@@ -421,7 +448,7 @@ export function PromotionJoinPage() {
                   {promotion.short_description}
                 </Text>
               </div>
-              <ThemeIcon size={54} radius="xl" color={promotion.tone}>
+              <ThemeIcon size={54} radius="xl" color={promotion.card_tone}>
                 <IconDiscount size={25} />
               </ThemeIcon>
             </Group>
@@ -452,7 +479,7 @@ export function PromotionJoinPage() {
 
             {alreadyParticipating ? (
               <Alert color="teal" variant="light" radius="lg" icon={<IconCheck size={18} />}>
-                Вы уже участвуете в этой акции. Текущие настройки загружены с backend.
+                Вы уже участвуете в этой акции.
               </Alert>
             ) : null}
           </Stack>
@@ -499,13 +526,13 @@ export function PromotionJoinPage() {
                   key={benefit}
                   p="sm"
                   radius="lg"
-                  bg={`${promotion.tone}.0`}
+                  bg={`${promotion.card_tone}.0`}
                 >
                   <Group gap="sm" wrap="nowrap" align="start">
                     <ThemeIcon
                       size={28}
                       radius="xl"
-                      color={promotion.tone}
+                      color={promotion.card_tone}
                       variant="light"
                       style={{ flexShrink: 0 }}
                     >
@@ -755,15 +782,6 @@ export function PromotionJoinPage() {
               </Text>
             ) : null}
 
-            <Alert
-              radius="lg"
-              color="blue"
-              variant="light"
-              icon={<IconInfoCircle size={18} />}
-            >
-              На этом frontend-этапе кнопка проверяет настройки, но не сохраняет участие:
-              POST-контракт и таблицы будут добавлены вместе с backend-реализацией.
-            </Alert>
           </Stack>
         </Paper>
 
@@ -774,7 +792,13 @@ export function PromotionJoinPage() {
           gradient={{ from: 'brand.5', to: 'brand.7', deg: 90 }}
           radius="xl"
           fullWidth
-          disabled={!joinOpen || alreadyParticipating}
+          disabled={
+            !joinOpen ||
+            alreadyParticipating ||
+            participationsQuery.isLoading ||
+            participationsQuery.isError
+          }
+          loading={createParticipationMutation.isPending}
           styles={{
             root: {
               minHeight: 58,
@@ -782,9 +806,63 @@ export function PromotionJoinPage() {
             },
           }}
         >
-          Проверить и подготовить участие
+          Вступить в акцию
         </Button>
       </Stack>
     </form>
+  )
+}
+
+export function PromotionJoinPage() {
+  const { promotionId } = useParams()
+  const navigate = useNavigate()
+  const promotionQuery = usePromotionQuery(promotionId)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [promotionId])
+
+  if (promotionQuery.isLoading) {
+    return (
+      <Group justify="center" py="xl">
+        <Loader color="brand" />
+      </Group>
+    )
+  }
+
+  if (promotionQuery.isError || !promotionQuery.data) {
+    const notFound =
+      promotionQuery.error instanceof ApiError && promotionQuery.error.status === 404
+
+    return (
+      <Paper
+        radius="xl"
+        p="xl"
+        shadow="sm"
+        style={{ border: '1px solid rgba(154, 65, 254, 0.1)' }}
+      >
+        <Stack align="center" gap="md">
+          <ThemeIcon size={54} radius="xl" variant="light" color="red">
+            <IconAlertCircle size={25} />
+          </ThemeIcon>
+          <Title order={2}>{notFound ? 'Акция не найдена' : 'Не удалось загрузить акцию'}</Title>
+          <Text c="dimmed" ta="center">
+            {notFound
+              ? 'Возможно, ссылка устарела или кампания больше недоступна.'
+              : 'Попробуйте обновить страницу чуть позже.'}
+          </Text>
+          <Button radius="xl" onClick={() => navigate('/app/promotions')}>
+            Вернуться к календарю
+          </Button>
+        </Stack>
+      </Paper>
+    )
+  }
+
+  return (
+    <PromotionJoinForm
+      key={promotionQuery.data.slug}
+      promotion={promotionQuery.data}
+    />
   )
 }
