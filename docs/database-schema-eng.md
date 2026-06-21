@@ -1,4 +1,4 @@
-# Promo Constructor Database Schema
+# Promo Navigator Database Schema
 
 ## Tables
 
@@ -404,7 +404,7 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `id` | `bigserial` | Internal seller identifier in Promo Constructor. |
+| `id` | `bigserial` | Internal seller identifier in Promo Navigator. |
 | `username` | `varchar(255)` | Login used for authentication. Must be unique. |
 | `password_hash` | `varchar(255)` | Hashed password. Raw password is never stored. |
 | `display_name` | `varchar(255)` | Human-readable seller name for UI and API responses. |

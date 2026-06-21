@@ -54,9 +54,9 @@ export function PrivateLayout() {
           <Stack gap="md">
             <Group justify="space-between" align="start" gap="lg">
               <div>
-                <Title order={2}>Промо конструктор</Title>
+                <Title order={2}>Промо-навигатор</Title>
                 <Text c="dimmed" mt={6}>
-                  Конструктор механик продвижения для продавцов
+                  Управление механиками продвижения для продавцов
                 </Text>
               </div>
 

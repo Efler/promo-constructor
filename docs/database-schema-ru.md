@@ -1,4 +1,4 @@
-# Схема Базы Данных Promo Constructor
+# Схема базы данных «Промо-навигатора»
 
 ## Таблицы
 
@@ -404,7 +404,7 @@ create index ix_refresh_sessions_revoked_at on refresh_sessions (revoked_at);
 
 | Поле | Тип | Смысл |
 | --- | --- | --- |
-| `id` | `bigserial` | Внутренний идентификатор селлера в Promo Constructor. |
+| `id` | `bigserial` | Внутренний идентификатор селлера в «Промо-навигаторе». |
 | `username` | `varchar(255)` | Логин для аутентификации. Должен быть уникальным. |
 | `password_hash` | `varchar(255)` | Хеш пароля. Сам пароль в базе не хранится. |
 | `display_name` | `varchar(255)` | Человекочитаемое имя селлера для UI и API-ответов. |
