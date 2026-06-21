@@ -4,12 +4,13 @@ import { RequireAuth } from '../../features/auth/RequireAuth'
 import { BundleConstructorPage } from '../../pages/bundles/BundleConstructorPage'
 import { BundleListPage } from '../../pages/bundles/BundleListPage'
 import { MechanicsOverviewPage } from '../../pages/home/MechanicsOverviewPage'
-import { MechanicWorkspacePage } from '../../pages/home/MechanicWorkspacePage'
 import { PrivateLayout } from '../../pages/home/PrivateLayout'
 import { LoginPage } from '../../pages/login/LoginPage'
 import { PromocodeConstructorPage } from '../../pages/promocodes/PromocodeConstructorPage'
 import { PromocodeListPage } from '../../pages/promocodes/PromocodeListPage'
 import { SellerProfilePage } from '../../pages/profile/SellerProfilePage'
+import { PromotionDashboardPage } from '../../pages/promotions/PromotionDashboardPage'
+import { PromotionJoinPage } from '../../pages/promotions/PromotionJoinPage'
 
 const router = createBrowserRouter([
   {
@@ -42,12 +43,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'promotions',
-        element: (
-          <MechanicWorkspacePage
-            title="Акции"
-            description="Создавайте акции для отдельных товаров и подбирайте условия, которые помогают повысить продажи."
-          />
-        ),
+        element: <PromotionDashboardPage />,
+      },
+      {
+        path: 'promotions/:promotionId/join',
+        element: <PromotionJoinPage />,
       },
       {
         path: 'promocodes',
