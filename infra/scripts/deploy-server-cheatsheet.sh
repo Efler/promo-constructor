@@ -60,10 +60,27 @@ set -euo pipefail
 # - BACKEND_COOKIE_SECURE=true for HTTPS
 # - API_ADMIN_KEY (required on VPS for backend API unlock)
 # - FRONTEND_INTERNAL_API_KEY (required so frontend UI can proxy to backend without manual headers)
+# - OLLAMA_MODEL, OLLAMA_CPUS and OLLAMA_MEMORY_LIMIT for the VPS resource profile
+# - VITE_LLM_RECOMMENDATIONS_ENABLED=true to use Ollama, false for local demo selection
+#
+# Ollama recommendation requests are one-shot:
+# - every request must contain only the mechanic rules, current seller state and current seller need
+# - never append previous user/model messages or reuse the `context` field from /api/generate
+# - OLLAMA_KEEP_ALIVE keeps only model weights in RAM and does not preserve conversation history
 
 # 5. Build the application images from Dockerfiles.
+VITE_LLM_RECOMMENDATIONS_ENABLED="$(
+  grep -E '^VITE_LLM_RECOMMENDATIONS_ENABLED=' .env.deploy \
+    | tail -n 1 \
+    | cut -d '=' -f 2-
+)"
+VITE_LLM_RECOMMENDATIONS_ENABLED="${VITE_LLM_RECOMMENDATIONS_ENABLED:-true}"
+
 docker build -t promo-constructor-backend:latest ./backend
-docker build -t promo-constructor-frontend:latest ./frontend
+docker build \
+  --build-arg "VITE_LLM_RECOMMENDATIONS_ENABLED=$VITE_LLM_RECOMMENDATIONS_ENABLED" \
+  -t promo-constructor-frontend:latest \
+  ./frontend
 
 # 6. Start PostgreSQL first.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d pc_postgres
@@ -71,7 +88,11 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d pc_post
 # 7. Apply Alembic migrations using the backend image.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm pc_backend alembic upgrade head
 
-# 8. Start the whole application stack.
+# 8. Start Ollama and download the configured model.
+docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d pc_ollama
+docker compose --env-file .env.deploy -f docker-compose.deploy.yml --profile ollama-init run --rm pc_ollama_model_init
+
+# 9. Start the whole application stack.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
 
 # Backend API protection note:
@@ -79,14 +100,14 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
 # - regular frontend UI traffic goes through an internal nginx proxy path and does not require the browser to set X-Admin-Key manually
 # - no browser unlock page is used in the current simplified protection model
 
-# 9. Optional manual seed loading for demo/test data.
+# 10. Optional manual seed loading for demo/test data.
 # This is intentionally not part of migrations or automatic startup.
 # Run only when you explicitly want to populate the deploy database with seed data:
 # sudo ./infra/scripts/apply-seeds.sh
 # If the script is not executable on the server, run:
 # sudo bash ./infra/scripts/apply-seeds.sh
 
-# 10. Before requesting certificates:
+# 11. Before requesting certificates:
 # - make sure your domain A/AAAA records point to this VPS
 # - make sure ports 80 and 443 are open on the server/firewall
 # - make sure no host-level nginx/apache occupies ports 80/443
@@ -105,7 +126,7 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
 # Then open:
 # http://your-domain.example/.well-known/acme-challenge/test
 
-# 11. Request the first certificate with webroot challenge.
+# 12. Request the first certificate with webroot challenge.
 # Replace domains and email with your real values.
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm certbot \
 #   certonly --webroot -w /var/www/certbot \
@@ -116,19 +137,20 @@ docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
 # After successful issue, restart frontend so nginx switches to HTTPS config.
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml restart pc_frontend
 
-# 12. pgAdmin is part of the mandatory stack and is reachable over HTTPS after certificate issue:
+# 13. pgAdmin is part of the mandatory stack and is reachable over HTTPS after certificate issue:
 # https://your-domain.example/pgadmin/
 
-# 13. Check status and logs.
+# 14. Check status and logs.
 docker compose --env-file .env.deploy -f docker-compose.deploy.yml ps
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml logs -f pc_backend
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml logs -f pc_frontend
+# docker compose --env-file .env.deploy -f docker-compose.deploy.yml logs -f pc_ollama
 
-# 14. Renew certificates periodically from host cron.
+# 15. Renew certificates periodically from host cron.
 # Example cron entry:
 # 0 3 * * * cd /path/to/promo-constructor && docker compose --env-file .env.deploy -f docker-compose.deploy.yml run --rm certbot renew --webroot -w /var/www/certbot && docker compose --env-file .env.deploy -f docker-compose.deploy.yml exec -T pc_frontend nginx -s reload
 
-# 15. Useful maintenance commands.
+# 16. Useful maintenance commands.
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml pull
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml down
 # docker compose --env-file .env.deploy -f docker-compose.deploy.yml up -d
