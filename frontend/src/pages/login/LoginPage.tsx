@@ -11,16 +11,18 @@ type FormValues = {
   password: string
 }
 
+const demoCredentials: FormValues = {
+  username: 'seller_roman',
+  password: 'SellerPass123!',
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
 
   const form = useForm<FormValues>({
-    initialValues: {
-      username: '',
-      password: '',
-    },
+    initialValues: demoCredentials,
     validate: {
       username: (value) => (value.trim().length > 0 ? null : 'Укажи логин продавца'),
       password: (value) => (value.trim().length > 0 ? null : 'Укажи пароль'),
@@ -107,6 +109,7 @@ export function LoginPage() {
                   size="md"
                   leftSection={<IconUserCircle size={18} />}
                   {...form.getInputProps('username')}
+                  onFocus={(event) => event.currentTarget.select()}
                 />
                 <PasswordInput
                   label="Пароль"
@@ -114,6 +117,7 @@ export function LoginPage() {
                   size="md"
                   leftSection={<IconLock size={18} />}
                   {...form.getInputProps('password')}
+                  onFocus={(event) => event.currentTarget.select()}
                 />
                 <Button
                   type="submit"
